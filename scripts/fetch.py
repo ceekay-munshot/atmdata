@@ -71,8 +71,14 @@ def _extract_xls_urls(html: str, base_url: str) -> list[str]:
 
 def collect_all_file_urls(session: requests.Session) -> list[str]:
     print(f"GET {LISTING_URL}")
-    r = session.get(LISTING_URL, headers=HEADERS, timeout=60)
-    r.raise_for_status()
+    try:
+        r = session.get(LISTING_URL, headers=HEADERS, timeout=60)
+    except requests.RequestException as e:
+        print(f"  FATAL: initial GET failed: {e}", file=sys.stderr)
+        return []
+    if r.status_code != 200:
+        print(f"  FATAL: initial GET returned HTTP {r.status_code}", file=sys.stderr)
+        return []
     state = _parse_aspnet_state(r.text)
     if not state.get("__VIEWSTATE"):
         print("WARN: __VIEWSTATE missing — site structure may have changed")
@@ -136,6 +142,13 @@ def download(url: str, dest: Path, session: requests.Session) -> bool:
         return False
     if r.status_code != 200:
         print(f"   ERR HTTP {r.status_code}", file=sys.stderr)
+        return False
+    # Sanity check: RBI sometimes returns HTML error pages for dead links.
+    # Real XLS files start with D0CF11E0A1B11AE1 (compound binary) and XLSX
+    # with PK\x03\x04 (zip). Reject anything that doesn't look like Excel.
+    head = r.content[:4]
+    if not (head.startswith(b"\xd0\xcf\x11\xe0") or head.startswith(b"PK\x03\x04")):
+        print(f"   ERR not an Excel file (got {head!r})", file=sys.stderr)
         return False
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(r.content)
