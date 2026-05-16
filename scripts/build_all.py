@@ -25,7 +25,7 @@ def main() -> None:
     by_period: dict[str, Path] = {}
     unknown_period: list[Path] = []
     for path in files:
-        period = detect_period(path.name)
+        period = detect_period(path)
         if not period:
             unknown_period.append(path)
             continue
@@ -43,9 +43,15 @@ def main() -> None:
     for period, path in sorted(by_period.items()):
         try:
             result = parse_file(path)
+            banks = result.get("banks") or []
+            if not banks:
+                msg = f"FAIL {path.name} (period={period}): 0 banks extracted (unrecognised layout?)"
+                print(msg)
+                errors.append(msg)
+                continue
             out_path = OUT_DIR / f"{period}.json"
             out_path.write_text(json.dumps(result, indent=2, default=str))
-            print(f"OK   {path.name} -> data/processed/{period}.json  ({len(result['banks'])} banks)")
+            print(f"OK   {path.name} -> data/processed/{period}.json  ({len(banks)} banks)")
             ok += 1
         except Exception as e:
             tb = traceback.format_exc()

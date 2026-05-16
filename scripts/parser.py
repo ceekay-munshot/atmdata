@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -30,27 +31,71 @@ MONTHS = {
 }
 
 
-def detect_period(filename: str) -> str | None:
-    """Extract YYYY-MM from a filename. RBI uses three naming schemes:
-      - ATM<MONTHNAME><YYYY>  e.g. ATMMARCH2026<hash>.XLSX (modern)
-      - ATMCS<MM><YYYY>       e.g. ATMCS012017<hash>.XLS  (legacy 2017-ish)
-      - ATM<MM><YYYY>         e.g. ATM122025<hash>.XLSX   (short numeric)
+MIN_YEAR = 2008
+MAX_YEAR = date.today().year + 1
+
+TITLE_PERIOD_RE = re.compile(
+    r"\b(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)"
+    r"[\s,\-]+(\d{4})\b",
+    re.IGNORECASE,
+)
+
+
+def _validate_period(year: int, month: int) -> bool:
+    return MIN_YEAR <= year <= MAX_YEAR and 1 <= month <= 12
+
+
+def detect_period_from_filename(filename: str) -> str | None:
+    """Best-effort period extraction from filename. Returns None if not a
+    confident match. Used as a fast path only — content-based detection is
+    the source of truth.
     """
     name = Path(filename).stem.upper()
+    # ATM<MONTHNAME><YYYY> (preferred, unambiguous)
     for mname, mnum in MONTHS.items():
-        m = re.search(rf"ATM{mname}(\d{{4}})", name)
-        if m:
+        m = re.search(rf"(?:^|[^A-Z]){mname}(\d{{4}})", name)
+        if m and _validate_period(int(m.group(1)), mnum):
             return f"{m.group(1)}-{mnum:02d}"
+    # ATMCS<MM><YYYY>
     m = re.search(r"ATMCS(\d{2})(\d{4})", name)
-    if m:
-        mm = int(m.group(1))
-        if 1 <= mm <= 12:
-            return f"{m.group(2)}-{mm:02d}"
-    m = re.search(r"ATM(\d{2})(\d{4})", name)
-    if m:
-        mm = int(m.group(1))
-        if 1 <= mm <= 12:
-            return f"{m.group(2)}-{mm:02d}"
+    if m and _validate_period(int(m.group(2)), int(m.group(1))):
+        return f"{m.group(2)}-{int(m.group(1)):02d}"
+    return None
+
+
+def extract_period_from_content(path: Path) -> str | None:
+    """Open the file and look for a title row like
+    'ATM & Card Statistics for September 2017'. Most reliable signal.
+    """
+    engine = "xlrd" if path.suffix.lower() == ".xls" else "openpyxl"
+    try:
+        df = pd.read_excel(path, sheet_name=0, header=None, engine=engine, nrows=6)
+    except Exception:
+        return None
+    for r in range(min(6, len(df))):
+        for c in range(min(15, df.shape[1])):
+            v = df.iat[r, c]
+            if not isinstance(v, str):
+                continue
+            m = TITLE_PERIOD_RE.search(v)
+            if m:
+                mnum = MONTHS.get(m.group(1).upper())
+                year = int(m.group(2))
+                if mnum and _validate_period(year, mnum):
+                    return f"{year}-{mnum:02d}"
+    return None
+
+
+def detect_period(filename_or_path: str | Path) -> str | None:
+    """Resolve period (YYYY-MM) for a file. Tries filename first, falls back
+    to opening the file and reading its title row.
+    """
+    path = Path(filename_or_path)
+    fn_period = detect_period_from_filename(path.name)
+    if fn_period:
+        return fn_period
+    if path.is_file():
+        return extract_period_from_content(path)
     return None
 
 
@@ -217,7 +262,7 @@ def parse_file(path: str | Path) -> dict:
     engine = "xlrd" if path.suffix.lower() == ".xls" else "openpyxl"
     df = pd.read_excel(path, sheet_name=0, header=None, engine=engine)
 
-    period = detect_period(path.name)
+    period = detect_period(path)
     fmt = _detect_format(df)
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
 
