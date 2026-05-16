@@ -46,13 +46,11 @@ function render() {
   _container.innerHTML = `
     <div class="fb-group">
       <span class="fb-label">Metric</span>
-      <select class="fb-select" id="f-metric">
+      <select class="fb-select" id="f-metric" style="min-width:240px">
         ${METRIC_OPTIONS.map(([v, l]) =>
           `<option value="${v}" ${v === s.metric ? 'selected' : ''}>${l}</option>`).join('')}
       </select>
     </div>
-
-    <div class="fb-divider"></div>
 
     <div class="fb-group">
       <span class="fb-label">Category</span>
@@ -64,32 +62,28 @@ function render() {
 
     <div class="fb-group">
       <span class="fb-label">Bank</span>
-      <select class="fb-select" id="f-bank">
+      <select class="fb-select" id="f-bank" style="min-width:200px">
         <option value="">All banks</option>
         ${banks.map(b =>
           `<option value="${b}" ${s.banks[0] === b ? 'selected' : ''}>${b}</option>`).join('')}
       </select>
     </div>
 
-    <div class="fb-divider"></div>
-
     <div class="fb-group">
       <span class="fb-label">From</span>
-      <select class="fb-select" id="f-from" style="min-width:110px">
+      <select class="fb-select" id="f-from" style="min-width:120px">
         ${ps.map(p => `<option value="${p}" ${p === fromVal ? 'selected' : ''}>${p}</option>`).join('')}
       </select>
     </div>
     <div class="fb-group">
       <span class="fb-label">To</span>
-      <select class="fb-select" id="f-to" style="min-width:110px">
+      <select class="fb-select" id="f-to" style="min-width:120px">
         ${ps.map(p => `<option value="${p}" ${p === toVal ? 'selected' : ''}>${p}</option>`).join('')}
       </select>
     </div>
 
-    <div class="fb-divider"></div>
-
     <div class="fb-group">
-      <span class="fb-label">Freq</span>
+      <span class="fb-label">Frequency</span>
       ${segmented('f-freq', FREQ_OPTIONS, s.freq)}
     </div>
 
@@ -103,7 +97,7 @@ function render() {
       ${segmented('f-growth', GROWTH_OPTIONS, s.growthType)}
     </div>
 
-    <div class="fb-actions">
+    <div class="fb-group actions no-divider">
       <button class="btn" id="f-reset" title="Reset all filters">Reset</button>
     </div>
   `;

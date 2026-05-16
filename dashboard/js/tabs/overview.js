@@ -1,35 +1,97 @@
-// Overview tab — Part 1 stub: long-term trend chart only.
-// Part 2 will flesh out the remaining 3 hero visuals + bottom table.
+// Overview tab — 4 hero visuals + bottom bank-wise table.
+//   1. Long-term Trend (full width hero)
+//   2. Growth / De-growth (responds to Growth Type toggle)
+//   3. Bank Ranking (top banks for latest period)
+//   4. Market Share Movement (top banks share over time, or single bank if filtered)
+//   + Bottom data table: bank-wise latest-period view (Value / Growth / Share / Δpp / Rank)
+//
+// Every chart and the table respond to ALL global filters/toggles via subscribe().
 
-import { rows, manifest } from '../data.js';
+import { rows, manifest, allBanks, banksInCategory, latestPeriod } from '../data.js';
 import { getState, subscribe } from '../state.js';
-import { series, filterRows, denominatorRows, shareSeries, metric } from '../calc.js';
+import {
+  series, filterRows, denominatorRows, shareSeries, shareChange,
+  growth, rankBanks, metric, fmtCr, fmtInt, fmtPct, fmtPP,
+} from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum } from '../chartopts.js';
 
-let chart = null;
+let charts = {};      // id → ECharts instance
 let _root = null;
 let _unsub = null;
+let _sortState = { col: 'value', dir: 'desc' };  // for bottom table
 
 const HTML = `
   <div class="grid">
-    <div class="card">
+    <!-- HERO: Long-term Trend -->
+    <div class="card accent" id="card-trend">
       <div class="card-head">
         <div class="card-head-text">
-          <div class="card-title" id="ov-title">Long-term Trend</div>
-          <div class="card-sub" id="ov-sub">—</div>
+          <div class="card-title">Long-term Trend</div>
+          <div class="card-sub" id="trend-sub">—</div>
         </div>
         <div class="card-actions">
-          <button class="btn" id="ov-export">Export to Excel</button>
+          <button class="btn" data-export="trend">Export</button>
         </div>
       </div>
-      <div class="chart tall" id="ov-chart"></div>
+      <div class="chart tall" id="chart-trend"></div>
     </div>
 
-    <div class="card">
-      <div class="empty">
-        <div class="empty-title">Part 2 — coming next</div>
-        <div class="empty-sub">Growth / Ranking / Market-share Movement visuals will land here. The plumbing is in place.</div>
+    <!-- ROW 2: Growth + Ranking -->
+    <div class="grid grid-2">
+      <div class="card" id="card-growth">
+        <div class="card-head">
+          <div class="card-head-text">
+            <div class="card-title">Growth / De-growth</div>
+            <div class="card-sub" id="growth-sub">—</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" data-export="growth">Export</button>
+          </div>
+        </div>
+        <div class="chart" id="chart-growth"></div>
       </div>
+
+      <div class="card" id="card-rank">
+        <div class="card-head">
+          <div class="card-head-text">
+            <div class="card-title">Bank Ranking</div>
+            <div class="card-sub" id="rank-sub">—</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn" data-export="rank">Export</button>
+          </div>
+        </div>
+        <div class="chart" id="chart-rank"></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: Market Share Movement -->
+    <div class="card" id="card-share">
+      <div class="card-head">
+        <div class="card-head-text">
+          <div class="card-title">Market Share Movement</div>
+          <div class="card-sub" id="share-sub">—</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn" data-export="share">Export</button>
+        </div>
+      </div>
+      <div class="chart" id="chart-share"></div>
+    </div>
+
+    <!-- BOTTOM: Bank-wise table -->
+    <div class="card" id="card-table">
+      <div class="card-head">
+        <div class="card-head-text">
+          <div class="card-title">Bank-wise Latest Period</div>
+          <div class="card-sub" id="table-sub">—</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn primary" data-export="all">Export All to Excel</button>
+        </div>
+      </div>
+      <div class="tbl-wrap" id="table-wrap"></div>
     </div>
   </div>
 `;
@@ -37,133 +99,516 @@ const HTML = `
 export function mount(root) {
   _root = root;
   root.innerHTML = HTML;
-  chart = echarts.init(root.querySelector('#ov-chart'));
+
+  charts.trend  = echarts.init(root.querySelector('#chart-trend'));
+  charts.growth = echarts.init(root.querySelector('#chart-growth'));
+  charts.rank   = echarts.init(root.querySelector('#chart-rank'));
+  charts.share  = echarts.init(root.querySelector('#chart-share'));
+
   window.addEventListener('resize', onResize);
-  root.querySelector('#ov-export').onclick = onExport;
+
+  // Export buttons
+  root.querySelectorAll('[data-export]').forEach(btn => {
+    btn.addEventListener('click', () => onExport(btn.dataset.export));
+  });
+
   redraw();
   _unsub = subscribe(redraw);
 }
 
 export function unmount() {
-  if (chart) { chart.dispose(); chart = null; }
+  for (const c of Object.values(charts)) c.dispose();
+  charts = {};
   window.removeEventListener('resize', onResize);
   if (_unsub) { _unsub(); _unsub = null; }
 }
 
-function onResize() { if (chart) chart.resize(); }
+function onResize() { for (const c of Object.values(charts)) c.resize(); }
 
+// ── Master redraw ────────────────────────────────────────────────────────
 function redraw() {
   const state = getState();
-  const m = metric(state.metric);
   const allRows = rows();
   const filtered = filterRows(allRows, state);
 
-  let data = series(filtered, state.metric, state.freq);
-  let yLabel = m.short;
-  let titleSub = `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'}`;
+  renderTrend(state, allRows, filtered);
+  renderGrowth(state, allRows, filtered);
+  renderRank(state, allRows, filtered);
+  renderShare(state, allRows, filtered);
+  renderTable(state, allRows, filtered);
+}
 
-  if (state.view === 'share') {
-    const denom = denominatorRows(allRows, state);
-    const denomSeries = series(denom, state.metric, state.freq);
-    data = shareSeries(data, denomSeries);
-    yLabel = 'Share %';
-    titleSub += ' · Market share (%)';
+// ── 1. Long-term Trend ──────────────────────────────────────────────────
+function renderTrend(state, allRows, filtered) {
+  const m = metric(state.metric);
+  let data = series(filtered, state.metric, state.freq);
+  const isShare = state.view === 'share';
+  if (isShare) {
+    const denom = series(denominatorRows(allRows, state), state.metric, state.freq);
+    data = shareSeries(data, denom);
   }
 
-  _root.querySelector('#ov-sub').textContent = titleSub;
+  _root.querySelector('#trend-sub').textContent =
+    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'}${isShare ? ' · Market share' : ''}`;
 
   const xs = data.map(d => d.label);
   const ys = data.map(d => d.value);
+  const color = PALETTE[0];
+  const valFmt = isShare ? (v => v == null ? '—' : v.toFixed(2) + '%') : m.format;
 
-  chart.setOption(option(xs, ys, yLabel, m, state.view), true);
-}
-
-function option(xs, ys, yLabel, m, view) {
-  const isShare = view === 'share';
-  const valueFormatter = isShare
-    ? (v) => v == null ? '—' : v.toFixed(2) + '%'
-    : m.format;
-
-  return {
-    grid: { left: 70, right: 24, top: 30, bottom: 50 },
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(15,23,42,0.92)',
-      borderWidth: 0,
-      textStyle: { color: '#fff', fontSize: 12 },
+  charts.trend.setOption({
+    grid: { left: 70, right: 24, top: 24, bottom: 48 },
+    tooltip: { ...TOOLTIP_BASE,
       formatter: (params) => {
         const p = params[0];
-        return `<div style="font-weight:500;margin-bottom:4px">${p.axisValue}</div>
-                <div>${m.short}: <b>${valueFormatter(p.value)}</b></div>`;
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue}</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block"></span>
+                  ${m.short}: <b>${valFmt(p.value)}</b>
+                </div>`;
       },
     },
-    xAxis: {
-      type: 'category', data: xs,
-      axisLine: { lineStyle: { color: '#cbd2dc' } },
-      axisLabel: { color: '#64748b', fontSize: 11 },
-      axisTick: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      name: yLabel, nameGap: 18, nameTextStyle: { color: '#64748b', fontSize: 11 },
-      axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#e3e6ec', type: 'dashed' } },
-      axisLabel: {
-        color: '#64748b', fontSize: 11,
-        formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v),
-      },
-    },
+    xAxis: { ...AXIS_X, data: xs },
+    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
+      formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
     series: [{
       type: 'line', smooth: true, showSymbol: false,
-      lineStyle: { color: '#2563eb', width: 2.5 },
-      areaStyle: {
-        color: {
-          type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(37,99,235,0.22)' },
-            { offset: 1, color: 'rgba(37,99,235,0.02)' },
-          ],
-        },
-      },
+      lineStyle: { color, width: 2.5 },
+      areaStyle: { color: gradientArea(color) },
       emphasis: { focus: 'series' },
       data: ys,
     }],
-    animation: true,
-    animationDuration: 600,
-    animationEasing: 'cubicOut',
-  };
+    animation: true, animationDuration: 600, animationEasing: 'cubicOut',
+  }, true);
 }
 
-function compactNum(v) {
-  if (v == null) return '';
-  const abs = Math.abs(v);
-  if (abs >= 1e9) return (v / 1e9).toFixed(1) + 'B';
-  if (abs >= 1e6) return (v / 1e6).toFixed(1) + 'M';
-  if (abs >= 1e3) return (v / 1e3).toFixed(1) + 'K';
-  return v.toString();
+// ── 2. Growth / De-growth ───────────────────────────────────────────────
+function renderGrowth(state, allRows, filtered) {
+  const m = metric(state.metric);
+  const isShareChange = state.growthType === 'ShareChange';
+  const isShare = state.view === 'share' || isShareChange;
+
+  // base series: either absolute or share-of-denominator
+  let base = series(filtered, state.metric, state.freq);
+  if (isShare) {
+    const denom = series(denominatorRows(allRows, state), state.metric, state.freq);
+    base = shareSeries(base, denom);
+  }
+
+  let gArr, yLabel, valSuffix, units;
+  if (isShareChange) {
+    const lookback = state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1;
+    gArr = shareChange(base, lookback);
+    yLabel = 'Δ pp'; valSuffix = ' pp'; units = 'pp';
+  } else {
+    gArr = growth(base, state.growthType, state.freq);
+    yLabel = '%'; valSuffix = '%'; units = '%';
+  }
+
+  _root.querySelector('#growth-sub').textContent =
+    `${m.short} · ${state.growthType === 'ShareChange' ? 'Share Δ (pp, YoY)' : state.growthType}${isShare && !isShareChange ? ' · on market share' : ''}`;
+
+  const xs = base.map(d => d.label);
+  const colored = gArr.map(v => {
+    if (v == null) return { value: null };
+    if (v > 0)  return { value: v, itemStyle: { color: UP   } };
+    if (v < 0)  return { value: v, itemStyle: { color: DOWN } };
+    return { value: v, itemStyle: { color: FLAT } };
+  });
+
+  charts.growth.setOption({
+    grid: { left: 60, right: 16, top: 24, bottom: 44 },
+    tooltip: { ...TOOLTIP_BASE,
+      formatter: (params) => {
+        const p = params[0];
+        const v = p.value;
+        const c = v == null ? '#94a3b8' : v > 0 ? UP : v < 0 ? DOWN : FLAT;
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue}</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="width:8px;height:8px;background:${c};border-radius:50%;display:inline-block"></span>
+                  ${state.growthType}: <b>${v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + valSuffix}</b>
+                </div>`;
+      },
+    },
+    xAxis: { ...AXIS_X, data: xs },
+    yAxis: { ...AXIS_Y, name: yLabel, nameTextStyle: { color: '#64748b', fontSize: 11 },
+      axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => v.toFixed(0) + units } },
+    series: [{
+      type: 'bar', data: colored,
+      barMaxWidth: 18,
+      itemStyle: { borderRadius: [3, 3, 0, 0] },
+      emphasis: { focus: 'series' },
+    }],
+    animation: true, animationDuration: 500,
+  }, true);
 }
 
-function freqLabel(f) {
-  return f === 'M' ? 'Monthly' : f === 'Q' ? 'Quarterly' : 'Yearly';
+// ── 3. Bank Ranking ─────────────────────────────────────────────────────
+function renderRank(state, allRows, filtered) {
+  const m = metric(state.metric);
+  const period = state.to || latestPeriod();
+  // Ranking should respect category but not bank-single-select (otherwise just 1 bar)
+  const baseRows = state.banks.length ? rows().filter(r =>
+    (state.category === 'all' || r.category === state.category)) : filtered;
+  const ranked = rankBanks(baseRows, state.metric, period).slice(0, 12);
+
+  _root.querySelector('#rank-sub').textContent =
+    `Top ${ranked.length} by ${m.short} · ${period}${state.category !== 'all' ? ' · ' + state.category : ''}`;
+
+  const xs = ranked.map(r => r.bank).reverse();      // reverse so largest at top
+  const ys = ranked.map(r => r.value).reverse();
+  const cats = ranked.map(r => r.category).reverse();
+
+  charts.rank.setOption({
+    grid: { left: 160, right: 36, top: 16, bottom: 24 },
+    tooltip: { ...TOOLTIP_BASE,
+      formatter: (params) => {
+        const p = params[0];
+        const i = ranked.length - 1 - p.dataIndex;
+        const r = ranked[i];
+        return `<div style="font-weight:600;margin-bottom:4px">${r.bank}</div>
+                <div style="color:#cbd2dc;font-size:11px;margin-bottom:6px">${r.category || '—'}</div>
+                <div>${m.short}: <b>${m.format(r.value)}</b></div>
+                <div>Share: <b>${r.share == null ? '—' : r.share.toFixed(2) + '%'}</b></div>`;
+      },
+    },
+    xAxis: { type: 'value',
+      axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => compactNum(v) },
+      axisLine: { show: false }, splitLine: { lineStyle: { color: '#e3e6ec', type: 'dashed' } },
+    },
+    yAxis: { type: 'category', data: xs,
+      axisLabel: { color: '#334155', fontSize: 11, fontWeight: 500,
+        formatter: (v) => v.length > 22 ? v.slice(0, 21) + '…' : v },
+      axisLine: { show: false }, axisTick: { show: false },
+    },
+    series: [{
+      type: 'bar', data: ys,
+      barMaxWidth: 16,
+      itemStyle: {
+        borderRadius: [0, 5, 5, 0],
+        color: (params) => {
+          const cat = cats[params.dataIndex];
+          return catColor(cat);
+        },
+      },
+      label: { show: true, position: 'right',
+        color: '#334155', fontSize: 11, fontWeight: 600,
+        formatter: (p) => compactNum(p.value),
+      },
+    }],
+    animation: true, animationDuration: 600,
+  }, true);
 }
 
-function onExport() {
+function catColor(cat) {
+  switch (cat) {
+    case 'Public Sector':     return '#2563eb';
+    case 'Private Sector':    return '#7c3aed';
+    case 'Foreign Bank':      return '#0891b2';
+    case 'Payment Bank':      return '#ea580c';
+    case 'Small Finance Bank':return '#059669';
+    default:                  return '#64748b';
+  }
+}
+
+// ── 4. Market Share Movement ────────────────────────────────────────────
+// If a single bank is selected: show that bank's share over time.
+// Else: pick top 5 banks by latest-period value within the (cat-filtered)
+// universe and plot each one's share trend.
+function renderShare(state, allRows, filtered) {
+  const m = metric(state.metric);
+  const denom = denominatorRows(allRows, state);
+
+  let targets = state.banks;
+  if (!targets.length) {
+    const period = state.to || latestPeriod();
+    const universe = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
+    targets = rankBanks(universe, state.metric, period).slice(0, 5).map(r => r.bank);
+  }
+
+  const periodsList = denom; // not used directly, but ensure denom calc runs
+  const denomSeries = series(denom, state.metric, state.freq);
+  const denomMap = new Map(denomSeries.map(d => [d.key, d.value]));
+
+  const sets = targets.map(bank => {
+    const bankRows = allRows.filter(r => r.bank === bank);
+    const bs = series(bankRows, state.metric, state.freq);
+    return {
+      name: bank,
+      data: bs.map(d => {
+        const den = denomMap.get(d.key);
+        const v = (den == null || den === 0 || d.value == null) ? null : (d.value / den) * 100;
+        return { key: d.key, label: d.label, value: v };
+      }),
+    };
+  });
+
+  const xs = (sets[0]?.data || []).map(d => d.label);
+  const series_ = sets.map((s, i) => ({
+    name: s.name,
+    type: 'line', smooth: true, showSymbol: false,
+    lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
+    itemStyle: { color: PALETTE[i % PALETTE.length] },
+    emphasis: { focus: 'series', lineStyle: { width: 3 } },
+    data: s.data.map(d => d.value),
+  }));
+
+  _root.querySelector('#share-sub').textContent =
+    targets.length ?
+      `${m.short} share % · ${targets.length === 1 ? targets[0] : 'top ' + targets.length + ' banks'}${state.category !== 'all' ? ' within ' + state.category : ' of industry'}`
+    : 'No data';
+
+  if (!targets.length || !xs.length) {
+    charts.share.setOption({
+      title: { text: 'No data', left: 'center', top: 'center', textStyle: { color: '#94a3b8', fontWeight: 500, fontSize: 13 } },
+      series: [],
+    }, true);
+    return;
+  }
+
+  charts.share.setOption({
+    grid: { left: 60, right: 16, top: 40, bottom: 44 },
+    legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 }, icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
+    tooltip: { ...TOOLTIP_BASE,
+      formatter: (params) => {
+        let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
+        for (const p of params.sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))) {
+          if (p.value == null) continue;
+          html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+            <span style="width:8px;height:8px;background:${p.color};border-radius:50%;display:inline-block"></span>
+            ${truncate(p.seriesName, 22)}: <b>${p.value.toFixed(2)}%</b>
+          </div>`;
+        }
+        return html;
+      },
+    },
+    xAxis: { ...AXIS_X, data: xs },
+    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: v => v.toFixed(1) + '%' } },
+    series: series_,
+    animation: true, animationDuration: 600,
+  }, true);
+}
+
+// ── 5. Bottom data table ────────────────────────────────────────────────
+function renderTable(state, allRows, filtered) {
+  const m = metric(state.metric);
+  const period = state.to || latestPeriod();
+  // Always use cat-filtered universe (ignore bank filter so rank makes sense)
+  const baseRows = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
+  const ranked = rankBanks(baseRows, state.metric, period);
+
+  // For each ranked bank, compute growth (using current growthType vs reference period)
+  // and share-change in pp.
+  const refPeriod = referencePeriod(period, state.growthType, state.freq);
+  const refRowsArr = refPeriod ? baseRows.filter(r => r.period === refPeriod) : [];
+  const refMap = new Map();
+  for (const r of refRowsArr) {
+    const v = r[m.field];
+    if (v == null) continue;
+    refMap.set(r.bank, (refMap.get(r.bank) ?? 0) + v);
+  }
+  const refTotal = [...refMap.values()].reduce((s, v) => s + v, 0);
+
+  const enriched = ranked.map((r, i) => {
+    const refValRaw = refMap.get(r.bank);
+    const refValDisp = refValRaw == null ? null : m.transform(refValRaw);
+    let g = null;
+    if (refValDisp != null && refValDisp !== 0 && r.value != null) {
+      g = ((r.value - refValDisp) / refValDisp) * 100;
+    }
+    const refShare = (refValRaw != null && refTotal > 0) ? (refValRaw / refTotal) * 100 : null;
+    const shareDelta = (refShare != null && r.share != null) ? r.share - refShare : null;
+    return { ...r, growth: g, shareDelta, rank: i + 1 };
+  });
+
+  // sort by current sort state
+  const sorted = sortRows(enriched, _sortState);
+
+  const headerSub = `${m.label} · ${period} · ${state.category !== 'all' ? state.category + ' · ' : ''}${enriched.length} banks · growth vs ${refPeriod || '—'} (${state.growthType})`;
+  _root.querySelector('#table-sub').textContent = headerSub;
+
+  const wrap = _root.querySelector('#table-wrap');
+  const cols = [
+    { id: 'rank',        label: '#',            num: true,  cell: r => `<span class="rank-cell ${r.rank <= 3 ? 'top' : ''}">${r.rank}</span>` },
+    { id: 'bank',        label: 'Bank',         num: false, cell: r => r.bank },
+    { id: 'category',    label: 'Category',     num: false, cell: r => r.category ? `<span class="chip ${catSlug(r.category)}">${shortCat(r.category)}</span>` : '—' },
+    { id: 'value',       label: m.short,        num: true,  cell: r => m.format(r.value) },
+    { id: 'growth',      label: state.growthType, num: true, cell: r => deltaCell(r.growth, '%') },
+    { id: 'share',       label: 'Share',        num: true,  cell: r => r.share == null ? '—' : r.share.toFixed(2) + '%' },
+    { id: 'shareDelta',  label: 'Share Δ',      num: true,  cell: r => deltaCell(r.shareDelta, ' pp') },
+  ];
+
+  wrap.innerHTML = `
+    <table class="tbl">
+      <thead><tr>
+        ${cols.map(c => {
+          const sortClass = _sortState.col === c.id ? (`sort-${_sortState.dir}`) : '';
+          const ind = _sortState.col === c.id ? (_sortState.dir === 'asc' ? '▲' : '▼') : '↕';
+          return `<th class="sortable ${c.num ? 'num' : ''} ${sortClass}" data-col="${c.id}">${c.label}<span class="sort-ind">${ind}</span></th>`;
+        }).join('')}
+      </tr></thead>
+      <tbody>
+        ${sorted.map(r => `<tr>${cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.cell(r)}</td>`).join('')}</tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+  wrap.querySelectorAll('thead th.sortable').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.col;
+      _sortState.dir = (_sortState.col === col && _sortState.dir === 'desc') ? 'asc' : 'desc';
+      _sortState.col = col;
+      renderTable(state, allRows, filtered);
+    };
+  });
+}
+
+function referencePeriod(period, growthType, freq) {
+  if (freq !== 'M') return null;       // table is always latest month
+  const [y, m] = period.split('-').map(Number);
+  let offset;
+  if (growthType === 'MoM') offset = 1;
+  else if (growthType === '3M') offset = 3;
+  else if (growthType === 'YoY' || growthType === 'ShareChange') offset = 12;
+  else offset = 1;
+  const date = new Date(Date.UTC(y, m - 1 - offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function sortRows(rs, sortState) {
+  const { col, dir } = sortState;
+  const sign = dir === 'asc' ? 1 : -1;
+  return [...rs].sort((a, b) => {
+    let av = a[col], bv = b[col];
+    if (typeof av === 'string') return sign * av.localeCompare(bv ?? '');
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return sign * (av - bv);
+  });
+}
+
+function deltaCell(v, suffix) {
+  if (v == null || isNaN(v)) return '<span class="delta-flat">—</span>';
+  const cls = v > 0 ? 'delta-up' : v < 0 ? 'delta-down' : 'delta-flat';
+  const sign = v > 0 ? '+' : '';
+  return `<span class="${cls}">${sign}${v.toFixed(2)}${suffix}</span>`;
+}
+
+function catSlug(cat) {
+  if (!cat) return '';
+  if (cat.includes('Public'))  return 'public';
+  if (cat.includes('Private')) return 'private';
+  if (cat.includes('Foreign')) return 'foreign';
+  if (cat.includes('Payment')) return 'payment';
+  if (cat.includes('Small'))   return 'sfb';
+  return '';
+}
+function shortCat(cat) {
+  if (!cat) return '';
+  return cat.replace(' Sector', '').replace(' Bank', '').replace('Small Finance', 'SFB');
+}
+
+function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+function freqLabel(f) { return f === 'M' ? 'Monthly' : f === 'Q' ? 'Quarterly' : 'Yearly'; }
+
+// ── Export ──────────────────────────────────────────────────────────────
+function onExport(which) {
   const state = getState();
   const m = metric(state.metric);
   const allRows = rows();
   const filtered = filterRows(allRows, state);
-  let data = series(filtered, state.metric, state.freq);
-  let header = ['Period', m.label];
-  if (state.view === 'share') {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const sheets = [];
+
+  if (which === 'trend' || which === 'all') {
+    let data = series(filtered, state.metric, state.freq);
+    let header = ['Period', m.label];
+    if (state.view === 'share') {
+      const denom = series(denominatorRows(allRows, state), state.metric, state.freq);
+      data = shareSeries(data, denom);
+      header = ['Period', `${m.short} (market share %)`];
+    }
+    sheets.push({ name: 'Long-term Trend', rows: [header, ...data.map(d => [d.label, d.value])] });
+  }
+
+  if (which === 'growth' || which === 'all') {
+    let base = series(filtered, state.metric, state.freq);
+    const isShareChange = state.growthType === 'ShareChange';
+    const isShare = state.view === 'share' || isShareChange;
+    if (isShare) base = shareSeries(base, series(denominatorRows(allRows, state), state.metric, state.freq));
+    const g = isShareChange
+      ? shareChange(base, state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1)
+      : growth(base, state.growthType, state.freq);
+    sheets.push({
+      name: 'Growth',
+      rows: [['Period', isShareChange ? 'Share Δ (pp)' : `${state.growthType} %`],
+             ...base.map((d, i) => [d.label, g[i]])],
+    });
+  }
+
+  if (which === 'rank' || which === 'all') {
+    const period = state.to || latestPeriod();
+    const baseRows = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
+    const ranked = rankBanks(baseRows, state.metric, period);
+    sheets.push({
+      name: 'Ranking',
+      rows: [['Rank', 'Bank', 'Category', m.label, 'Share %'],
+             ...ranked.map((r, i) => [i + 1, r.bank, r.category || '—', r.value, r.share])],
+    });
+  }
+
+  if (which === 'share' || which === 'all') {
     const denom = denominatorRows(allRows, state);
     const denomSeries = series(denom, state.metric, state.freq);
-    data = shareSeries(data, denomSeries);
-    header = ['Period', `${m.short} — Market share %`];
+    const denomMap = new Map(denomSeries.map(d => [d.key, d.value]));
+    let targets = state.banks;
+    if (!targets.length) {
+      const period = state.to || latestPeriod();
+      const universe = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
+      targets = rankBanks(universe, state.metric, period).slice(0, 5).map(r => r.bank);
+    }
+    const periodList = denomSeries.map(d => d.label);
+    const keyList = denomSeries.map(d => d.key);
+    const colData = targets.map(bank => {
+      const bs = series(allRows.filter(r => r.bank === bank), state.metric, state.freq);
+      const bsMap = new Map(bs.map(d => [d.key, d.value]));
+      return keyList.map(k => {
+        const num = bsMap.get(k);
+        const den = denomMap.get(k);
+        return (num == null || den == null || den === 0) ? null : (num / den) * 100;
+      });
+    });
+    const header = ['Period', ...targets.map(t => `${t} — share %`)];
+    const rowsOut = periodList.map((label, i) => [label, ...colData.map(col => col[i])]);
+    sheets.push({ name: 'Market Share', rows: [header, ...rowsOut] });
   }
-  const sheetRows = [header, ...data.map(d => [d.label, d.value])];
-  exportSheets(
-    `overview_long-term-trend_${new Date().toISOString().slice(0,10)}.xlsx`,
-    [{ name: 'Long-term Trend', rows: sheetRows }],
-    currentFilterMeta(),
-  );
+
+  if (which === 'all') {
+    const period = state.to || latestPeriod();
+    const baseRows = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
+    const ranked = rankBanks(baseRows, state.metric, period);
+    const refPeriod = referencePeriod(period, state.growthType, state.freq);
+    const refRowsArr = refPeriod ? baseRows.filter(r => r.period === refPeriod) : [];
+    const refMap = new Map();
+    for (const r of refRowsArr) {
+      const v = r[m.field];
+      if (v == null) continue;
+      refMap.set(r.bank, (refMap.get(r.bank) ?? 0) + v);
+    }
+    const refTotal = [...refMap.values()].reduce((s, v) => s + v, 0);
+    const tableRows = ranked.map((r, i) => {
+      const refValRaw = refMap.get(r.bank);
+      const refValDisp = refValRaw == null ? null : m.transform(refValRaw);
+      let g = null;
+      if (refValDisp != null && refValDisp !== 0 && r.value != null) g = ((r.value - refValDisp) / refValDisp) * 100;
+      const refShare = (refValRaw != null && refTotal > 0) ? (refValRaw / refTotal) * 100 : null;
+      const sd = (refShare != null && r.share != null) ? r.share - refShare : null;
+      return [i + 1, r.bank, r.category || '—', r.value, g, r.share, sd];
+    });
+    sheets.push({
+      name: 'Bank Table',
+      rows: [['Rank', 'Bank', 'Category', m.label, `${state.growthType} %`, 'Share %', 'Share Δ pp'], ...tableRows],
+    });
+  }
+
+  exportSheets(`overview_${which}_${stamp}.xlsx`, sheets, currentFilterMeta());
 }
