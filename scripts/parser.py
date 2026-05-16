@@ -136,13 +136,30 @@ def _find_category(text: str) -> str | None:
 
 
 def _detect_format(df: pd.DataFrame) -> str:
-    """Return 'modern' (Micro ATMs present) or 'legacy' (no Micro ATMs)."""
+    """Return one of:
+      'modern'        - 2023+, Bank Name col 2, Micro ATMs present, values in Rs '000
+      'transition'    - 2020 (Jun+)-2022, Bank Name col 1, Micro ATMs, Rs Lakh
+      'legacy'        - 2017-2019, Bank Name col 2, no Micro ATMs, Rs Millions
+      'legacy_narrow' - 2020 Mar-Apr (and similar), Bank Name col 1, no Micro ATMs, Rs Lakh
+    """
     head_text = " ".join(
         str(v) for v in df.head(12).values.flatten() if isinstance(v, str)
     ).lower()
-    if "micro atm" in head_text:
-        return "modern"
-    return "legacy"
+    has_micro = "micro atm" in head_text
+    # Locate the column that holds the literal "Bank Name" header
+    bank_col: int | None = None
+    for r in range(min(12, len(df))):
+        for c in range(min(5, df.shape[1])):
+            v = df.iat[r, c]
+            if isinstance(v, str) and v.strip().lower() == "bank name":
+                bank_col = c
+                break
+        if bank_col is not None:
+            break
+
+    if has_micro:
+        return "modern" if bank_col == 2 else "transition"
+    return "legacy" if bank_col == 2 else "legacy_narrow"
 
 
 def _find_data_start(df: pd.DataFrame, bank_col: int) -> int:
@@ -256,6 +273,116 @@ def parse_legacy(df: pd.DataFrame) -> list[dict]:
     return rows
 
 
+def parse_transition(df: pd.DataFrame) -> list[dict]:
+    """2020-2022 layout: has Micro ATMs but tighter column placement than
+    modern. Values are in Rupees Lakh (1 Lakh = 100 thousand).
+    """
+    # Confirmed from June 2020 / Jan 2021 / Jan 2022 files:
+    # col 1 = Bank Name, 2 = On-site, 3 = Off-site, 6 = Micro ATMs
+    # col 9 = CC Transactions @ ATM (volume) = cash withdrawal volume
+    # col 11 = CC Value of transactions @ ATM (Rs Lakh)
+    # col 14 = DC Transactions @ ATM (volume)
+    # col 16 = DC Value of transactions @ ATM (Rs Lakh)
+    BANK, ONSITE, OFFSITE, MICRO = 1, 2, 3, 6
+    CC_VOL, CC_VAL_LAKH = 9, 11
+    DC_VOL, DC_VAL_LAKH = 14, 16
+
+    rows: list[dict] = []
+    current_category: str | None = None
+
+    for i in range(len(df)):
+        bank_cell = df.iat[i, BANK] if df.shape[1] > BANK else None
+        if not isinstance(bank_cell, str):
+            continue
+        bank = bank_cell.strip()
+        if not bank:
+            continue
+
+        # Section header (Public/Private/Foreign/Payment/Small Finance) shares
+        # the bank-name column in this layout.
+        cat = _find_category(bank)
+        if cat:
+            current_category = cat
+            continue
+
+        lower = bank.lower()
+        if (lower.startswith("total")
+                or lower.startswith("grand total")
+                or lower.startswith("note")
+                or lower in ("bank name", "sr. no.", "particulars")
+                or lower.startswith("scheduled commercial")):
+            continue
+
+        if not _is_numeric(df.iat[i, ONSITE]) and not _is_numeric(df.iat[i, OFFSITE]):
+            continue
+
+        cc_val = _to_float(df.iat[i, CC_VAL_LAKH])
+        dc_val = _to_float(df.iat[i, DC_VAL_LAKH])
+
+        rows.append({
+            "bank": bank,
+            "category": current_category,
+            "on_site_atms": _to_int(df.iat[i, ONSITE]),
+            "off_site_atms": _to_int(df.iat[i, OFFSITE]),
+            "micro_atms": _to_int(df.iat[i, MICRO]),
+            "credit_card_atm_withdrawal_volume": _to_int(df.iat[i, CC_VOL]),
+            "credit_card_atm_withdrawal_value_thousands": cc_val * 100 if cc_val is not None else None,
+            "debit_card_atm_withdrawal_volume": _to_int(df.iat[i, DC_VOL]),
+            "debit_card_atm_withdrawal_value_thousands": dc_val * 100 if dc_val is not None else None,
+        })
+    return rows
+
+
+def parse_legacy_narrow(df: pd.DataFrame) -> list[dict]:
+    """March-April 2020 layout: no Micro ATMs, Bank Name col 1, values in Lakh."""
+    BANK, ONSITE, OFFSITE = 1, 2, 3
+    CC_VOL, CC_VAL_LAKH = 7, 9
+    DC_VOL, DC_VAL_LAKH = 12, 14
+
+    rows: list[dict] = []
+    current_category: str | None = None
+
+    for i in range(len(df)):
+        bank_cell = df.iat[i, BANK] if df.shape[1] > BANK else None
+        if not isinstance(bank_cell, str):
+            continue
+        bank = bank_cell.strip()
+        if not bank:
+            continue
+
+        cat = _find_category(bank)
+        if cat:
+            current_category = cat
+            continue
+
+        lower = bank.lower()
+        if (lower.startswith("total")
+                or lower.startswith("grand total")
+                or lower.startswith("note")
+                or lower in ("bank name", "sr. no.", "particulars")
+                or lower.startswith("scheduled commercial")):
+            continue
+
+        if not _is_numeric(df.iat[i, ONSITE]) and not _is_numeric(df.iat[i, OFFSITE]):
+            continue
+
+        cc_val = _to_float(df.iat[i, CC_VAL_LAKH])
+        dc_val = _to_float(df.iat[i, DC_VAL_LAKH])
+
+        rows.append({
+            "bank": bank,
+            "category": current_category,
+            "on_site_atms": _to_int(df.iat[i, ONSITE]),
+            "off_site_atms": _to_int(df.iat[i, OFFSITE]),
+            "micro_atms": None,
+            "credit_card_atm_withdrawal_volume": _to_int(df.iat[i, CC_VOL]),
+            "credit_card_atm_withdrawal_value_thousands": cc_val * 100 if cc_val is not None else None,
+            "debit_card_atm_withdrawal_volume": _to_int(df.iat[i, DC_VOL]),
+            "debit_card_atm_withdrawal_value_thousands": dc_val * 100 if dc_val is not None else None,
+        })
+    return rows
+
+
 def parse_file(path: str | Path) -> dict:
     """Parse an RBI ATM stats file and return {period, format, banks: [...]}"""
     path = Path(path)
@@ -264,7 +391,14 @@ def parse_file(path: str | Path) -> dict:
 
     period = detect_period(path)
     fmt = _detect_format(df)
-    banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
+    if fmt == "modern":
+        banks = parse_modern(df)
+    elif fmt == "transition":
+        banks = parse_transition(df)
+    elif fmt == "legacy_narrow":
+        banks = parse_legacy_narrow(df)
+    else:
+        banks = parse_legacy(df)
 
     return {
         "period": period,
