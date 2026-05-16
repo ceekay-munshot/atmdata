@@ -7,16 +7,10 @@ import * as infrastructure from './tabs/infrastructure.js';
 import * as cards from './tabs/cards.js';
 import * as compare from './tabs/compare.js';
 import * as market from './tabs/market.js';
+import * as ask from './tabs/ask.js';
+import * as quality from './tabs/quality.js';
 
-const TABS = {
-  overview,
-  infrastructure,
-  cards,
-  compare,
-  market,
-  ask:            stub('Ask', 'ChatGPT-style query interface — Part 5.'),
-  quality:        stub('Data Quality', 'Coverage, gaps, reconciliation — Part 5.'),
-};
+const TABS = { overview, infrastructure, cards, compare, market, ask, quality };
 
 let currentTab = null;
 
@@ -33,6 +27,8 @@ async function boot() {
   mountFilters(document.querySelector('#filter-bar'));
   wireTabs();
   setFooter();
+  // Expose so tabs (e.g. Ask) can deep-link
+  window.navigateTab = activateTab;
   activateTab('overview');
 
   // hide veil
