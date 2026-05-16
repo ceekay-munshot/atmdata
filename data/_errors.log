@@ -12,304 +12,304 @@ SKIP BATMP230412.xls: could not detect period from filename
 
 FAIL BDEC140312.xls (period=2011-12): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL BATMP140312.xls (period=2012-01): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATMS08062012.xls (period=2012-04): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM04022013.xls (period=2012-12): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM140313.xls (period=2013-01): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM290513_FEB.xls (period=2013-02): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM290513_MAR.xls (period=2013-03): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM13030713F.xls (period=2013-05): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL CAT05082013F.xls (period=2013-06): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATMC23102013F.xls (period=2013-08): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATMCS01012014.xls (period=2013-09): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATC14012014.xls (period=2014-01): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL AC060614FS.xls (period=2014-03): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATMC7018880AAE64B9C901E3CF4407893D6.XLS (period=2015-06): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM94FB01AB84644B49AEA67C03B9A1C334.XLS (period=2015-07): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL AM0FB09196B028442EA6FB9A392A3FEA32.XLS (period=2015-08): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL AT1015D7D4F2BE7E4E412BBF4AB05C8A5DB585.XLS (period=2015-10): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM0320203A8362C0253D46D78706BE21CD6CA667.XLS (period=2020-03): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
 
 FAIL ATM042020F83BD431E5C342EAB529E142B272440F.XLS (period=2020-04): ValueError: Could not locate data start row
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
                                                      ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 227, in parse_legacy
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 227, in parse_legacy
     start = _find_data_start(df, BANK)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 162, in _find_data_start
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 162, in _find_data_start
     raise ValueError("Could not locate data start row")
 ValueError: Could not locate data start row
 
@@ -346,25 +346,25 @@ FAIL ATM0720211A82C3EEA1304D97AD4A4CF9AE157E60.XLSX (period=2021-07): 0 banks ex
 
 FAIL ATM082021A54F4D3A50C94B9BB68835EE1C36B956.XLSX (period=2021-08): IndexError: index 18 is out of bounds for axis 0 with size 18
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
             ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 210, in parse_modern
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 210, in parse_modern
     "credit_card_atm_withdrawal_value_thousands": _to_float(df.iat[i, CC_VAL]),
                                                             ~~~~~~^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/indexing.py", line 2527, in __getitem__
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/indexing.py", line 2527, in __getitem__
     return self.obj._get_value(*key, takeable=self._takeable)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4486, in _get_value
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 4486, in _get_value
     series = self._ixs(col, axis=1)
              ^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4313, in _ixs
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 4313, in _ixs
     col_mgr = self._mgr.iget(i)
               ^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/internals/managers.py", line 1217, in iget
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/internals/managers.py", line 1217, in iget
     block = self.blocks[self.blknos[i]]
                         ~~~~~~~~~~~^^^
 IndexError: index 18 is out of bounds for axis 0 with size 18
@@ -374,25 +374,25 @@ FAIL ATM09202177EDBFDE655D437AB219D0B196FCFD23.XLSX (period=2021-09): 0 banks ex
 
 FAIL ATM1020213EF20FCA31BD400AB71E8E09B04FBE7D.XLSX (period=2021-10): IndexError: index 18 is out of bounds for axis 0 with size 18
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
             ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 210, in parse_modern
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 210, in parse_modern
     "credit_card_atm_withdrawal_value_thousands": _to_float(df.iat[i, CC_VAL]),
                                                             ~~~~~~^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/indexing.py", line 2527, in __getitem__
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/indexing.py", line 2527, in __getitem__
     return self.obj._get_value(*key, takeable=self._takeable)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4486, in _get_value
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 4486, in _get_value
     series = self._ixs(col, axis=1)
              ^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4313, in _ixs
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 4313, in _ixs
     col_mgr = self._mgr.iget(i)
               ^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/internals/managers.py", line 1217, in iget
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/internals/managers.py", line 1217, in iget
     block = self.blocks[self.blknos[i]]
                         ~~~~~~~~~~~^^^
 IndexError: index 18 is out of bounds for axis 0 with size 18
@@ -404,25 +404,25 @@ FAIL ATMDECEMBER20211951A93663C448E5A650377BBB4E311C.XLSX (period=2021-12): 0 ba
 
 FAIL ATM2022JANUARY1C73A4D5438C48959894AEC2DA8AB3C5.XLSX (period=2022-01): IndexError: index 18 is out of bounds for axis 0 with size 18
 Traceback (most recent call last):
-  File "/home/user/atmdata/scripts/build_all.py", line 45, in main
+  File "/home/runner/work/atmdata/atmdata/scripts/build_all.py", line 45, in main
     result = parse_file(path)
              ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 267, in parse_file
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 267, in parse_file
     banks = parse_modern(df) if fmt == "modern" else parse_legacy(df)
             ^^^^^^^^^^^^^^^^
-  File "/home/user/atmdata/scripts/parser.py", line 210, in parse_modern
+  File "/home/runner/work/atmdata/atmdata/scripts/parser.py", line 210, in parse_modern
     "credit_card_atm_withdrawal_value_thousands": _to_float(df.iat[i, CC_VAL]),
                                                             ~~~~~~^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/indexing.py", line 2527, in __getitem__
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/indexing.py", line 2527, in __getitem__
     return self.obj._get_value(*key, takeable=self._takeable)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4486, in _get_value
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 4486, in _get_value
     series = self._ixs(col, axis=1)
              ^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4313, in _ixs
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py", line 4313, in _ixs
     col_mgr = self._mgr.iget(i)
               ^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/dist-packages/pandas/core/internals/managers.py", line 1217, in iget
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/internals/managers.py", line 1217, in iget
     block = self.blocks[self.blknos[i]]
                         ~~~~~~~~~~~^^^
 IndexError: index 18 is out of bounds for axis 0 with size 18
