@@ -5,13 +5,15 @@ import { mount as mountFilters } from './filters.js';
 import * as overview from './tabs/overview.js';
 import * as infrastructure from './tabs/infrastructure.js';
 import * as cards from './tabs/cards.js';
+import * as compare from './tabs/compare.js';
+import * as market from './tabs/market.js';
 
 const TABS = {
   overview,
   infrastructure,
   cards,
-  compare:        stub('Bank Comparison', 'Multi-bank comparison view — Part 4.'),
-  market:         stub('Market Share / Proportionate', 'Share heatmap & gainers/losers — Part 4.'),
+  compare,
+  market,
   ask:            stub('Ask', 'ChatGPT-style query interface — Part 5.'),
   quality:        stub('Data Quality', 'Coverage, gaps, reconciliation — Part 5.'),
 };

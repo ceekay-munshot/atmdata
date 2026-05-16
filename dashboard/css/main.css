@@ -466,6 +466,59 @@ table.tbl tbody tr:last-child td { border-bottom: none; }
 .delta-down { color: var(--down); font-weight: 600; }
 .delta-flat { color: var(--fg-4); font-weight: 500; }
 
+/* ─── Bank Comparison picker ───────────────────────────────────────────── */
+.cmp-picker {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 6px 0 2px;
+}
+.cmp-chip {
+  --c: #4f46e5;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 8px 5px 10px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: var(--fg);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.cmp-chip:hover { border-color: var(--c); box-shadow: 0 2px 8px color-mix(in srgb, var(--c) 25%, transparent); }
+.cmp-chip-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--c);
+}
+.cmp-chip-x {
+  border: none; background: transparent;
+  font-size: 16px; line-height: 1; padding: 0 4px;
+  color: var(--fg-3);
+  cursor: pointer; border-radius: 50%;
+}
+.cmp-chip-x:hover { color: var(--down); background: var(--down-soft); }
+.cmp-add { min-width: 200px !important; height: 32px !important; }
+.cmp-hint {
+  font-size: 12px; color: var(--fg-3); padding: 0 8px;
+}
+.cmp-hint.warn { color: var(--warn); font-weight: 600; }
+
+/* ─── Market Share movers ──────────────────────────────────────────────── */
+.mk-movers-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+}
+@media (max-width: 800px) { .mk-movers-grid { grid-template-columns: 1fr; } }
+.mk-movers-head {
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.mk-movers-head.up { color: var(--up); background: var(--up-soft); }
+.mk-movers-head.down { color: var(--down); background: var(--down-soft); }
+.mk-mov th { font-size: 10px !important; padding: 6px 10px !important; }
+.mk-mov td { padding: 7px 10px !important; }
+
 /* ─── Scrollbar polish ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
