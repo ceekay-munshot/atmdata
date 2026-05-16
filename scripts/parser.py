@@ -31,17 +31,26 @@ MONTHS = {
 
 
 def detect_period(filename: str) -> str | None:
-    """Extract YYYY-MM from a filename like ATMMARCH2026<hash>.XLSX or ATMCS012017<hash>.XLS."""
+    """Extract YYYY-MM from a filename. RBI uses three naming schemes:
+      - ATM<MONTHNAME><YYYY>  e.g. ATMMARCH2026<hash>.XLSX (modern)
+      - ATMCS<MM><YYYY>       e.g. ATMCS012017<hash>.XLS  (legacy 2017-ish)
+      - ATM<MM><YYYY>         e.g. ATM122025<hash>.XLSX   (short numeric)
+    """
     name = Path(filename).stem.upper()
-    # New format: ATM<MONTHNAME><YYYY>
     for mname, mnum in MONTHS.items():
         m = re.search(rf"ATM{mname}(\d{{4}})", name)
         if m:
             return f"{m.group(1)}-{mnum:02d}"
-    # Legacy format: ATMCS<MM><YYYY>
     m = re.search(r"ATMCS(\d{2})(\d{4})", name)
     if m:
-        return f"{m.group(2)}-{int(m.group(1)):02d}"
+        mm = int(m.group(1))
+        if 1 <= mm <= 12:
+            return f"{m.group(2)}-{mm:02d}"
+    m = re.search(r"ATM(\d{2})(\d{4})", name)
+    if m:
+        mm = int(m.group(1))
+        if 1 <= mm <= 12:
+            return f"{m.group(2)}-{mm:02d}"
     return None
 
 
