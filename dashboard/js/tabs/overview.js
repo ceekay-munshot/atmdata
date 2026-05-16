@@ -156,8 +156,12 @@ function renderTrend(state, allRows, filtered) {
   const color = PALETTE[0];
   const valFmt = isShare ? (v => v == null ? '—' : v.toFixed(2) + '%') : m.format;
 
+  // Compute mean for reference line
+  const valid = ys.filter(v => v != null);
+  const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+
   charts.trend.setOption({
-    grid: { left: 70, right: 24, top: 24, bottom: 48 },
+    grid: { left: 70, right: 28, top: 24, bottom: 70 },
     tooltip: { ...TOOLTIP_BASE,
       formatter: (params) => {
         const p = params[0];
@@ -168,14 +172,31 @@ function renderTrend(state, allRows, filtered) {
                 </div>`;
       },
     },
-    xAxis: { ...AXIS_X, data: xs },
+    xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
+    dataZoom: [
+      { type: 'inside', start: 0, end: 100 },
+      { type: 'slider', start: 0, end: 100, height: 18, bottom: 8,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(238, 242, 255, 0.5)',
+        fillerColor: 'rgba(79, 70, 229, 0.15)',
+        handleStyle: { color: '#4f46e5', borderColor: '#4f46e5' },
+        moveHandleStyle: { color: '#4f46e5' },
+        textStyle: { color: '#64748b', fontSize: 10 } },
+    ],
     series: [{
       type: 'line', smooth: true, showSymbol: false,
       lineStyle: { color, width: 2.5 },
       areaStyle: { color: gradientArea(color) },
       emphasis: { focus: 'series' },
+      markLine: mean != null ? {
+        symbol: 'none', silent: true,
+        lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },
+        label: { color: '#64748b', fontSize: 10, fontWeight: 500,
+                 position: 'end', formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)) },
+        data: [{ yAxis: mean }],
+      } : undefined,
       data: ys,
     }],
     animation: true, animationDuration: 600, animationEasing: 'cubicOut',
@@ -238,6 +259,12 @@ function renderGrowth(state, allRows, filtered) {
       barMaxWidth: 18,
       itemStyle: { borderRadius: [3, 3, 0, 0] },
       emphasis: { focus: 'series' },
+      markLine: {
+        symbol: 'none', silent: true,
+        lineStyle: { color: '#cbd2dc', type: 'solid', width: 1 },
+        label: { show: false },
+        data: [{ yAxis: 0 }],
+      },
     }],
     animation: true, animationDuration: 500,
   }, true);
@@ -259,11 +286,13 @@ function renderRank(state, allRows, filtered) {
   const ys = ranked.map(r => r.value).reverse();
   const cats = ranked.map(r => r.category).reverse();
 
+  // Lollipop: thin bar (the stick) + scatter (the head)
+  const colorByIdx = cats.map(catColor);
+
   charts.rank.setOption({
-    grid: { left: 160, right: 36, top: 16, bottom: 24 },
-    tooltip: { ...TOOLTIP_BASE,
-      formatter: (params) => {
-        const p = params[0];
+    grid: { left: 170, right: 56, top: 16, bottom: 24 },
+    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
+      formatter: (p) => {
         const i = ranked.length - 1 - p.dataIndex;
         const r = ranked[i];
         return `<div style="font-weight:600;margin-bottom:4px">${r.bank}</div>
@@ -281,21 +310,33 @@ function renderRank(state, allRows, filtered) {
         formatter: (v) => v.length > 22 ? v.slice(0, 21) + '…' : v },
       axisLine: { show: false }, axisTick: { show: false },
     },
-    series: [{
-      type: 'bar', data: ys,
-      barMaxWidth: 16,
-      itemStyle: {
-        borderRadius: [0, 5, 5, 0],
-        color: (params) => {
-          const cat = cats[params.dataIndex];
-          return catColor(cat);
+    series: [
+      {
+        type: 'bar', data: ys,
+        barWidth: 2.5,
+        itemStyle: {
+          color: (params) => colorByIdx[params.dataIndex],
+          borderRadius: 2,
         },
+        silent: true,
+        z: 1,
       },
-      label: { show: true, position: 'right',
-        color: '#334155', fontSize: 11, fontWeight: 600,
-        formatter: (p) => compactNum(p.value),
+      {
+        type: 'scatter', data: ys.map((v, i) => ({ value: v })),
+        symbolSize: 14,
+        itemStyle: {
+          color: (params) => colorByIdx[params.dataIndex],
+          borderColor: '#ffffff', borderWidth: 2,
+          shadowColor: 'rgba(15,23,42,0.15)', shadowBlur: 4,
+        },
+        label: { show: true, position: 'right',
+          color: '#334155', fontSize: 11, fontWeight: 600,
+          formatter: (p) => '  ' + compactNum(p.value),
+        },
+        emphasis: { scale: 1.35 },
+        z: 2,
       },
-    }],
+    ],
     animation: true, animationDuration: 600,
   }, true);
 }
@@ -346,11 +387,14 @@ function renderShare(state, allRows, filtered) {
   const xs = (sets[0]?.data || []).map(d => d.label);
   const series_ = sets.map((s, i) => ({
     name: s.name,
-    type: 'line', smooth: true, showSymbol: false,
+    type: 'line', smooth: 0.4, showSymbol: false,
     lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
     data: s.data.map(d => d.value),
+    // Highlight the latest data point with a symbol so the tip of each line is visible
+    endLabel: { show: true, color: PALETTE[i % PALETTE.length], fontWeight: 600, fontSize: 11,
+      formatter: (p) => p.value == null ? '' : ' ' + p.value.toFixed(1) + '%' },
   }));
 
   _root.querySelector('#share-sub').textContent =

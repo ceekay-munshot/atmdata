@@ -3,12 +3,13 @@
 import { load, manifest } from './data.js';
 import { mount as mountFilters } from './filters.js';
 import * as overview from './tabs/overview.js';
+import * as infrastructure from './tabs/infrastructure.js';
+import * as cards from './tabs/cards.js';
 
 const TABS = {
   overview,
-  // Stubs for Parts 3-5; rendered as "coming soon" until then.
-  infrastructure: stub('Infrastructure Trends', 'On-site / Off-site / Micro ATM analytics — Part 3.'),
-  cards:          stub('Card Withdrawal Trends', 'Debit/Credit × Volume/Value analytics — Part 3.'),
+  infrastructure,
+  cards,
   compare:        stub('Bank Comparison', 'Multi-bank comparison view — Part 4.'),
   market:         stub('Market Share / Proportionate', 'Share heatmap & gainers/losers — Part 4.'),
   ask:            stub('Ask', 'ChatGPT-style query interface — Part 5.'),
