@@ -1,0 +1,3 @@
+HTTP 200
+final URL: https://rbi.org.in/scripts/atmview.aspx
+content-length: 113040
