@@ -1,0 +1,48 @@
+name: Update RBI ATM data
+
+on:
+  schedule:
+    # 2nd of each month at 06:00 UTC — RBI usually publishes by month-end
+    - cron: '0 6 2 * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/update.yml'
+      - 'requirements.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch + parse
+        working-directory: scripts
+        run: python run.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Update RBI ATM data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
