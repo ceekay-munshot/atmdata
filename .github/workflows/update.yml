@@ -2,8 +2,10 @@ name: Update RBI ATM data
 
 on:
   schedule:
-    # 2nd of each month at 06:00 UTC — RBI usually publishes by month-end
-    - cron: '0 6 2 * *'
+    # Twice a month at 06:00 UTC — 5th catches new-month publishes,
+    # 20th catches mid-month revisions. RBI publishes ~6-8 weeks after
+    # month-end and re-publishes "(Revised)" versions for several months.
+    - cron: '0 6 5,20 * *'
   workflow_dispatch: {}
   push:
     branches: [main]
