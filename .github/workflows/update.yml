@@ -31,10 +31,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Debug probe (dumps listing page structure)
-        working-directory: scripts
-        run: python probe.py
-
       - name: Fetch + parse
         working-directory: scripts
         run: python run.py

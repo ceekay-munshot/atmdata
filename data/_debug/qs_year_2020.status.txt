@@ -1,3 +1,0 @@
-HTTP 200
-final URL: https://rbi.org.in/scripts/atmview.aspx?year=2020
-content-length: 113050

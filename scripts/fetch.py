@@ -1,21 +1,18 @@
-"""Download RBI Bankwise ATM/POS/Card Statistics Excel files.
+"""Download RBI Bankwise ATM/POS/Card Statistics Excel files for every year.
 
-Strategy:
-  1. Fetch the listing page https://rbi.org.in/scripts/atmview.aspx — this
-     usually only renders the current year's months.
-  2. Also fetch the year-filtered variants (atmview.aspx?yr=YYYY) for every
-     historical year. Both URL conventions in the wild are tried.
-  3. Extract every .XLS/.XLSX link pointing at rbidocs.rbi.org.in.
-  4. Download files we don't already have under data/raw/.
+The listing page (atmview.aspx) is an ASP.NET WebForm. The year sidebar links
+are JS handlers that call GetYearMonth(year, month), which sets the hidden
+inputs hdnYear/hdnMonth and submits the form. To enumerate all years we
+mimic that POST with the appropriate hdnYear, plus the ASP.NET state fields
+parsed from the initial GET.
 
-This script must run from an environment that can reach rbi.org.in — the
-managed sandbox has a host allowlist that blocks it, so this is intended for
-GitHub Actions.
+Sandbox note: rbi.org.in is blocked by the managed sandbox's network policy.
+This script only works from GitHub Actions runners (or any environment with
+unrestricted egress).
 """
 
 from __future__ import annotations
 
-import re
 import sys
 import time
 from datetime import date
@@ -28,6 +25,9 @@ from bs4 import BeautifulSoup
 LISTING_URL = "https://rbi.org.in/scripts/atmview.aspx"
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
 
+START_YEAR = 2009  # RBI ATM stats predate this in the sidebar but appear empty
+END_YEAR = date.today().year
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -35,37 +35,31 @@ HEADERS = {
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
+    "Referer": LISTING_URL,
 }
 
-FILE_PATTERN = re.compile(r"\.xlsx?$", re.IGNORECASE)
-ATM_FILE_HINT = re.compile(r"/(ATM|atm)[A-Za-z0-9]*\.xlsx?$", re.IGNORECASE)
+
+def _parse_aspnet_state(html: str) -> dict[str, str]:
+    soup = BeautifulSoup(html, "html.parser")
+    state: dict[str, str] = {}
+    for inp in soup.find_all("input", type="hidden"):
+        name = inp.get("name")
+        if name in ("__VIEWSTATE", "__VIEWSTATEGENERATOR", "__EVENTVALIDATION"):
+            state[name] = inp.get("value", "")
+    return state
 
 
-def _get(url: str, session: requests.Session) -> str | None:
-    try:
-        r = session.get(url, headers=HEADERS, timeout=60)
-    except requests.RequestException as e:
-        print(f"  ERR fetching {url}: {e}", file=sys.stderr)
-        return None
-    if r.status_code != 200:
-        print(f"  WARN {url} returned HTTP {r.status_code}", file=sys.stderr)
-        return None
-    return r.text
-
-
-def _extract_file_urls(html: str, base_url: str) -> list[str]:
-    """Return absolute URLs to .xls/.xlsx files that look like ATM stats files."""
+def _extract_xls_urls(html: str, base_url: str) -> list[str]:
     soup = BeautifulSoup(html, "html.parser")
     urls: list[str] = []
     for a in soup.find_all("a", href=True):
         href = a["href"].strip()
-        if not FILE_PATTERN.search(href):
+        if not href.lower().endswith((".xls", ".xlsx")):
             continue
         abs_url = urljoin(base_url, href)
         if "ATM" not in abs_url.upper():
             continue
         urls.append(abs_url)
-    # de-duplicate while preserving order
     seen: set[str] = set()
     out: list[str] = []
     for u in urls:
@@ -75,44 +69,70 @@ def _extract_file_urls(html: str, base_url: str) -> list[str]:
     return out
 
 
-def collect_file_urls() -> list[str]:
-    """Crawl the listing page + per-year variants and return all ATM file URLs."""
-    session = requests.Session()
+def collect_all_file_urls(session: requests.Session) -> list[str]:
+    print(f"GET {LISTING_URL}")
+    r = session.get(LISTING_URL, headers=HEADERS, timeout=60)
+    r.raise_for_status()
+    state = _parse_aspnet_state(r.text)
+    if not state.get("__VIEWSTATE"):
+        print("WARN: __VIEWSTATE missing — site structure may have changed")
+
     all_urls: list[str] = []
     seen: set[str] = set()
 
-    candidate_pages: list[str] = [LISTING_URL]
-    current_year = date.today().year
-    for yr in range(2010, current_year + 1):
-        candidate_pages.append(f"{LISTING_URL}?yr={yr}")
-        candidate_pages.append(f"{LISTING_URL}?Year={yr}")
+    # Include URLs from the initial page (current year listing)
+    for u in _extract_xls_urls(r.text, LISTING_URL):
+        if u not in seen:
+            seen.add(u)
+            all_urls.append(u)
 
-    for page_url in candidate_pages:
-        print(f"-> {page_url}")
-        html = _get(page_url, session)
-        if not html:
+    # POST once per year
+    for year in range(END_YEAR, START_YEAR - 1, -1):
+        form_data = {
+            "__EVENTTARGET": "",
+            "__EVENTARGUMENT": "",
+            "__VIEWSTATE": state.get("__VIEWSTATE", ""),
+            "__VIEWSTATEGENERATOR": state.get("__VIEWSTATEGENERATOR", ""),
+            "__EVENTVALIDATION": state.get("__EVENTVALIDATION", ""),
+            "hdnYear": str(year),
+            "hdnMonth": "0",
+            "UsrFontCntr$btn": "",
+        }
+        print(f"POST hdnYear={year}", end=" ")
+        try:
+            rr = session.post(LISTING_URL, data=form_data, headers=HEADERS, timeout=60)
+        except requests.RequestException as e:
+            print(f"ERR {e}")
             continue
-        urls = _extract_file_urls(html, page_url)
+        if rr.status_code != 200:
+            print(f"HTTP {rr.status_code}")
+            continue
+
+        # Refresh state from the response so subsequent POSTs use a fresh viewstate
+        new_state = _parse_aspnet_state(rr.text)
+        if new_state.get("__VIEWSTATE"):
+            state = new_state
+
+        urls = _extract_xls_urls(rr.text, LISTING_URL)
         new = [u for u in urls if u not in seen]
         for u in new:
             seen.add(u)
             all_urls.append(u)
-        if new:
-            print(f"   found {len(new)} new file URL(s)")
-        time.sleep(0.5)  # be polite
+        print(f"-> {len(urls)} links ({len(new)} new)")
+
+        time.sleep(0.5)
 
     return all_urls
 
 
 def download(url: str, dest: Path, session: requests.Session) -> bool:
-    """Download url to dest. Returns True if a new file was written."""
     if dest.exists():
         return False
-    print(f"   downloading {url}")
+    print(f"   download {url.rsplit('/', 1)[-1]}")
     try:
         r = session.get(url, headers=HEADERS, timeout=120)
     except requests.RequestException as e:
-        print(f"   ERR: {e}", file=sys.stderr)
+        print(f"   ERR {e}", file=sys.stderr)
         return False
     if r.status_code != 200:
         print(f"   ERR HTTP {r.status_code}", file=sys.stderr)
@@ -124,18 +144,17 @@ def download(url: str, dest: Path, session: requests.Session) -> bool:
 
 def main() -> int:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    urls = collect_file_urls()
+    session = requests.Session()
+    urls = collect_all_file_urls(session)
     print(f"\nTotal unique ATM file URLs discovered: {len(urls)}")
 
-    session = requests.Session()
     new_count = 0
     for url in urls:
         filename = url.rsplit("/", 1)[-1]
-        # RBI sometimes returns upper/lowercase extensions inconsistently
         dest = RAW_DIR / filename
         if download(url, dest, session):
             new_count += 1
-        time.sleep(0.3)
+            time.sleep(0.3)
 
     print(f"\nNew files downloaded: {new_count}")
     print(f"Total files in raw/: {len(list(RAW_DIR.iterdir()))}")
