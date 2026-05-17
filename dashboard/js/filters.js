@@ -1,7 +1,7 @@
 // Global filter bar — renders once, reads/writes state, broadcasts changes.
 
 import { getState, setState, subscribe } from './state.js';
-import { allBanks, allCategories, periods, latestPeriod, firstPeriod, banksInCategory } from './data.js';
+import { allBanks, allCategories, periods, latestPeriod, firstPeriod, banksInCategory, bankHasField } from './data.js';
 import { METRICS } from './calc.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -72,10 +72,26 @@ function render() {
 
       <div class="fb-group">
         <span class="fb-label">Bank</span>
-        <select class="fb-select" id="f-bank" style="min-width:220px">
+        <select class="fb-select" id="f-bank" style="min-width:260px">
           <option value="">All banks</option>
-          ${banks.map(b =>
-            `<option value="${b}" ${s.banks[0] === b ? 'selected' : ''}>${b}</option>`).join('')}
+          ${(() => {
+            // Sort: banks with data for current metric first, then banks without
+            // (with a clear "— no data" suffix so the user knows).
+            const field = METRICS[s.metric]?.field;
+            const withData = [], withoutData = [];
+            for (const b of banks) {
+              if (!field || bankHasField(b, field)) withData.push(b);
+              else withoutData.push(b);
+            }
+            const opt = (b, suffix='') =>
+              `<option value="${b}" ${s.banks[0] === b ? 'selected' : ''}>${b}${suffix}</option>`;
+            const withoutMarker = ` — no ${METRICS[s.metric]?.short.toLowerCase() ?? 'data'}`;
+            return [
+              ...withData.map(b => opt(b)),
+              ...(withoutData.length ? ['<option disabled>──────────</option>'] : []),
+              ...withoutData.map(b => opt(b, withoutMarker)),
+            ].join('');
+          })()}
         </select>
       </div>
 
