@@ -17,14 +17,22 @@ const METRIC_OPTIONS = [
 ];
 
 const GROWTH_OPTIONS = [
-  ['MoM', 'MoM'],
-  ['3M', '3M'],
-  ['YoY', 'YoY'],
-  ['ShareChange', 'Share Δ'],
+  ['MoM',         'MoM',     'Month over Month — current period vs the previous period'],
+  ['3M',          '3M',      '3-month — current month vs 3 months ago'],
+  ['YoY',         'YoY',     'Year over Year — current period vs same period 1 year ago'],
+  ['ShareChange', 'Share Δ', 'Share change in percentage points (pp), YoY — current share minus prior share'],
 ];
 
-const FREQ_OPTIONS = [['M', 'Monthly'], ['Q', 'Quarterly'], ['Y', 'Yearly']];
-const VIEW_OPTIONS = [['absolute', 'Absolute'], ['share', 'Market Share']];
+const FREQ_OPTIONS = [
+  ['M', 'Monthly',   'One data point per month'],
+  ['Q', 'Quarterly', 'Aggregated by calendar quarter (Q1=Jan-Mar etc.)'],
+  ['Y', 'Yearly',    'Aggregated by Indian Financial Year (Apr-Mar)'],
+];
+
+const VIEW_OPTIONS = [
+  ['absolute', 'Absolute',     'Raw values (counts / Rs Cr)'],
+  ['share',    'Market Share', 'Each bank as % of selected denominator (industry or category total)'],
+];
 
 let _container = null;
 
@@ -83,17 +91,17 @@ function render() {
     </div>
 
     <div class="fb-group">
-      <span class="fb-label">Frequency</span>
+      <span class="fb-label" title="How to bucket time">Frequency</span>
       ${segmented('f-freq', FREQ_OPTIONS, s.freq)}
     </div>
 
     <div class="fb-group">
-      <span class="fb-label">View</span>
+      <span class="fb-label" title="Show raw values or each bank's % of the chosen denominator">View</span>
       ${segmented('f-view', VIEW_OPTIONS, s.view)}
     </div>
 
     <div class="fb-group">
-      <span class="fb-label">Growth</span>
+      <span class="fb-label" title="Drives the Growth/De-growth chart and the growth column in tables">Growth</span>
       ${segmented('f-growth', GROWTH_OPTIONS, s.growthType)}
     </div>
 
@@ -131,8 +139,8 @@ function render() {
 function segmented(id, options, currentValue) {
   return `
     <div class="fb-toggle" data-id="${id}">
-      ${options.map(([v, l]) =>
-        `<button class="fb-toggle-btn ${v === currentValue ? 'active' : ''}" data-value="${v}">${l}</button>`).join('')}
+      ${options.map(([v, l, tip]) =>
+        `<button class="fb-toggle-btn ${v === currentValue ? 'active' : ''}" data-value="${v}"${tip ? ` title="${tip}"` : ''}>${l}</button>`).join('')}
     </div>
   `;
 }
