@@ -281,6 +281,16 @@ button { font-family: inherit; cursor: pointer; }
   transform: translateY(-1px);
 }
 .btn .ic { width: 14px; height: 14px; flex: 0 0 14px; }
+.btn-play { gap: 6px; }
+.btn-play svg { width: 11px; height: 11px; flex: 0 0 11px; }
+.btn-play span { font-weight: 600; }
+.btn-play.playing {
+  background: var(--brand-grad);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 3px 8px rgba(79,70,229,0.32);
+}
+.btn-play.playing:hover { color: white; filter: brightness(1.05); }
 
 /* ─── Main ─────────────────────────────────────────────────────────────── */
 .app-main {

@@ -10,13 +10,15 @@ import {
   growth, rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
 let _unsub = null;
 const MAX_BANKS = 5;
 const MIN_BANKS = 2;
+let _playing = { trend: null, share: null };
+let _cache = { trend: { values: [], colors: [] }, share: { values: [], colors: [] } };
 
 const HTML = `
   <div class="grid">
@@ -37,7 +39,10 @@ const HTML = `
             <div class="card-title">Trend Comparison</div>
             <div class="card-sub" id="cmp-trend-sub">—</div>
           </div>
-          <div class="card-actions"><button class="btn" data-export="trend">Export</button></div>
+          <div class="card-actions">
+            <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
+            <button class="btn" data-export="trend">Export</button>
+          </div>
         </div>
         <div class="chart" id="chart-cmp-trend"></div>
       </div>
@@ -48,7 +53,10 @@ const HTML = `
             <div class="card-title">Market Share Comparison</div>
             <div class="card-sub" id="cmp-share-sub">—</div>
           </div>
-          <div class="card-actions"><button class="btn" data-export="share">Export</button></div>
+          <div class="card-actions">
+            <button class="btn btn-play" data-action="play-share" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
+            <button class="btn" data-export="share">Export</button>
+          </div>
         </div>
         <div class="chart" id="chart-cmp-share"></div>
       </div>
@@ -87,17 +95,44 @@ export function mount(root) {
 
   window.addEventListener('resize', onResize);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
+  root.querySelector('[data-action="play-trend"]').addEventListener('click', () => togglePlay('trend'));
+  root.querySelector('[data-action="play-share"]').addEventListener('click', () => togglePlay('share'));
 
   renderPicker();
   redraw();
-  _unsub = subscribe(() => { renderPicker(); redraw(); });
+  _unsub = subscribe(() => { stopAll(); renderPicker(); redraw(); });
 }
 
 export function unmount() {
+  stopAll();
   for (const c of Object.values(charts)) c.dispose();
   charts = {};
   window.removeEventListener('resize', onResize);
   if (_unsub) { _unsub(); _unsub = null; }
+}
+
+function stopAll() { stopPlay('trend'); stopPlay('share'); }
+
+function stopPlay(key) {
+  if (_playing[key]) { _playing[key].stop(); _playing[key] = null; }
+  const sel = key === 'trend' ? '[data-action="play-trend"]' : '[data-action="play-share"]';
+  const btn = _root && _root.querySelector(sel);
+  if (btn) { btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; }
+}
+
+function togglePlay(key) {
+  if (_playing[key]) { stopPlay(key); redraw(); return; }
+  const cache = _cache[key];
+  if (!cache.values.length) return;
+  const sel = key === 'trend' ? '[data-action="play-trend"]' : '[data-action="play-share"]';
+  const chart = key === 'trend' ? charts.trend : charts.share;
+  const btn = _root.querySelector(sel);
+  btn.classList.add('playing');
+  btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  _playing[key] = playReplay(chart, {
+    seriesData: cache.values, colors: cache.colors, durationMs: 2500,
+    onDone: () => { _playing[key] = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
+  });
 }
 
 function onResize() { for (const c of Object.values(charts)) c.resize(); }
@@ -176,6 +211,11 @@ function renderTrend(state, allRows) {
     data: s.data.map(d => d.value),
   }));
 
+  _cache.trend = {
+    values: sets.map(s => s.data.map(d => d.value)),
+    colors: sets.map((_, i) => PALETTE[i % PALETTE.length]),
+  };
+
   charts.trend.setOption({
     grid: { left: 70, right: 24, top: 40, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 },
@@ -233,6 +273,11 @@ function renderShare(state, allRows) {
     endLabel: { show: true, color: PALETTE[i % PALETTE.length], fontWeight: 600, fontSize: 11,
       formatter: (p) => p.value == null ? '' : ' ' + p.value.toFixed(1) + '%' },
   }));
+
+  _cache.share = {
+    values: sets.map(s => s.data.map(d => d.value)),
+    colors: sets.map((_, i) => PALETTE[i % PALETTE.length]),
+  };
 
   charts.share.setOption({
     grid: { left: 60, right: 60, top: 40, bottom: 44 },

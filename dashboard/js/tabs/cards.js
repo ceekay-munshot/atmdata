@@ -12,12 +12,13 @@ import {
   growth, rankBanks, metric, METRICS, fmtCr, fmtInt,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
 let _unsub = null;
 let _sortState = { col: 'value', dir: 'desc' };
+let _playing = null;
 
 const CARD_METRICS = ['dc_vol', 'dc_val_cr', 'cc_vol', 'cc_val_cr'];
 
@@ -45,6 +46,7 @@ const HTML = `
           <div class="card-sub">Monthly flow values · For the month/period</div>
         </div>
         <div class="card-actions">
+          <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
           <div class="mini-toggle" id="card-side"></div>
           <div class="mini-toggle" id="card-measure"></div>
         </div>
@@ -103,16 +105,44 @@ export function mount(root) {
 
   window.addEventListener('resize', onResize);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
+  root.querySelector('[data-action="play-trend"]').addEventListener('click', togglePlayTrend);
 
   redraw();
-  _unsub = subscribe(() => { renderToggles(); redraw(); });
+  _unsub = subscribe(() => { stopPlayTrend(); renderToggles(); redraw(); });
 }
 
 export function unmount() {
+  stopPlayTrend();
   for (const c of Object.values(charts)) c.dispose();
   charts = {};
   window.removeEventListener('resize', onResize);
   if (_unsub) { _unsub(); _unsub = null; }
+}
+
+function stopPlayTrend() {
+  if (_playing) { _playing.stop(); _playing = null; }
+  const btn = _root && _root.querySelector('[data-action="play-trend"]');
+  if (btn) { btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; }
+}
+
+function togglePlayTrend() {
+  if (_playing) { stopPlayTrend(); redraw(); return; }
+  const state = getState();
+  const allRows = rows();
+  const filtered = filterRows(allRows, state);
+  let data = series(filtered, state.metric, state.freq);
+  if (state.view === 'share') {
+    data = shareSeries(data, series(denominatorRows(allRows, state), state.metric, state.freq));
+  }
+  const values = data.map(d => d.value);
+  const color = state.metric.startsWith('dc_') ? PALETTE[0] : PALETTE[3];
+  const btn = _root.querySelector('[data-action="play-trend"]');
+  btn.classList.add('playing');
+  btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  _playing = playReplay(charts.trend, {
+    seriesData: [values], colors: [color], durationMs: 2500,
+    onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
+  });
 }
 
 function onResize() { for (const c of Object.values(charts)) c.resize(); }
@@ -183,7 +213,7 @@ function renderTrend(state, allRows, filtered) {
     ],
     series: [{
       type: 'line', smooth: true, showSymbol: false,
-      lineStyle: { color, width: 2.5 },
+      lineStyle: { color, width: 2.6 },
       areaStyle: { color: gradientArea(color) },
       markLine: mean != null ? {
         symbol: 'none', silent: true,
@@ -192,6 +222,7 @@ function renderTrend(state, allRows, filtered) {
                  position: 'end', formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)) },
         data: [{ yAxis: mean }],
       } : undefined,
+      markPoint: latestGlowMarkPoint(xs, ys, color),
       data: ys,
     }],
     animation: true, animationDuration: 600,

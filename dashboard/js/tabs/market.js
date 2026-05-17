@@ -12,13 +12,16 @@ import {
   rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, hexA } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
 let _unsub = null;
 let _heatmapWindow = 36;   // months
 let _topN = 10;
+let _playing = null;
+let _trendValuesCache = [];
+let _trendColorsCache = [];
 
 const HTML = `
   <div class="grid">
@@ -29,6 +32,7 @@ const HTML = `
           <div class="card-sub" id="mk-sub">—</div>
         </div>
         <div class="card-actions">
+          <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
           <div class="mini-toggle" id="mk-topn">
             <button data-v="5">Top 5</button>
             <button class="active" data-v="10">Top 10</button>
@@ -93,6 +97,7 @@ export function mount(root) {
 
   window.addEventListener('resize', onResize);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
+  root.querySelector('[data-action="play-trend"]').addEventListener('click', togglePlayTrend);
   root.querySelector('#mk-topn').onclick = (e) => {
     const btn = e.target.closest('button[data-v]'); if (!btn) return;
     _topN = +btn.dataset.v;
@@ -107,14 +112,33 @@ export function mount(root) {
   };
 
   redraw();
-  _unsub = subscribe(redraw);
+  _unsub = subscribe(() => { stopPlayTrend(); redraw(); });
 }
 
 export function unmount() {
+  stopPlayTrend();
   for (const c of Object.values(charts)) c.dispose();
   charts = {};
   window.removeEventListener('resize', onResize);
   if (_unsub) { _unsub(); _unsub = null; }
+}
+
+function stopPlayTrend() {
+  if (_playing) { _playing.stop(); _playing = null; }
+  const btn = _root && _root.querySelector('[data-action="play-trend"]');
+  if (btn) { btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; }
+}
+
+function togglePlayTrend() {
+  if (_playing) { stopPlayTrend(); redraw(); return; }
+  if (!_trendValuesCache.length) return;
+  const btn = _root.querySelector('[data-action="play-trend"]');
+  btn.classList.add('playing');
+  btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  _playing = playReplay(charts.trend, {
+    seriesData: _trendValuesCache, colors: _trendColorsCache, durationMs: 2500,
+    onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
+  });
 }
 
 function onResize() { for (const c of Object.values(charts)) c.resize(); }
@@ -168,6 +192,10 @@ function renderTrend(state, allRows, universe, topBanks) {
     endLabel: { show: true, color: PALETTE[i % PALETTE.length], fontWeight: 600, fontSize: 11,
       formatter: (p) => p.value == null ? '' : ' ' + p.value.toFixed(1) + '%' },
   }));
+
+  // Cache for replay button
+  _trendValuesCache = sets.map(s => s.data.map(d => d.value));
+  _trendColorsCache = sets.map((_, i) => PALETTE[i % PALETTE.length]);
 
   charts.trend.setOption({
     grid: { left: 60, right: 80, top: 44, bottom: 44 },
@@ -317,69 +345,115 @@ function renderMovers(state, allRows, universe, period) {
 }
 
 // ── 4. Heatmap (bank × time → share %) ─────────────────────────────────
+// Cleaner palette, value labels inside larger cells, banks sorted by latest
+// share desc (so the "leader board" reads top-down), x-axis shows only
+// quarterly tick labels.
 function renderHeatmap(state, universe, period, topBanks) {
   const m = metric(state.metric);
-  // Determine month range: last _heatmapWindow months ending at `period`
   const allPeriods = [...new Set(universe.map(r => r.period))].sort();
   const endIdx = allPeriods.indexOf(period);
   if (endIdx < 0) { setEmpty(charts.heat, 'No data'); return; }
   const startIdx = Math.max(0, endIdx - _heatmapWindow + 1);
   const periodsWindow = allPeriods.slice(startIdx, endIdx + 1);
 
-  // Need denominator at each window period
   const dN = new Map();
   for (const p of periodsWindow) dN.set(p, sumAt(universe, p, m.field));
 
-  // Values: [xIdx, yIdx, value]
-  const ys = topBanks;
+  // Compute shares per bank per period AND latest-period share for sorting
+  const shareTable = new Map();    // bank → period → share
+  const latestShare = new Map();
+  for (const bank of topBanks) {
+    const br = universe.filter(r => r.bank === bank);
+    const row = new Map();
+    for (const p of periodsWindow) {
+      const num = sumAt(br, p, m.field);
+      const den = dN.get(p);
+      const s = den > 0 ? (num / den) * 100 : null;
+      row.set(p, s);
+    }
+    shareTable.set(bank, row);
+    latestShare.set(bank, row.get(periodsWindow[periodsWindow.length - 1]) ?? 0);
+  }
+
+  // Sort banks by latest-period share desc — leaderboard reads top-down
+  const ys = [...topBanks].sort((a, b) => (latestShare.get(b) ?? 0) - (latestShare.get(a) ?? 0));
+
   const data = [];
   let maxV = 0;
   for (let yi = 0; yi < ys.length; yi++) {
-    const bank = ys[yi];
-    const br = universe.filter(r => r.bank === bank);
+    const row = shareTable.get(ys[yi]);
     for (let xi = 0; xi < periodsWindow.length; xi++) {
-      const p = periodsWindow[xi];
-      const num = sumAt(br, p, m.field);
-      const den = dN.get(p);
-      const share = den > 0 ? (num / den) * 100 : null;
-      data.push([xi, yi, share == null ? '-' : Number(share.toFixed(2))]);
-      if (share != null && share > maxV) maxV = share;
+      const s = row.get(periodsWindow[xi]);
+      data.push([xi, yi, s == null ? '-' : Number(s.toFixed(2))]);
+      if (s != null && s > maxV) maxV = s;
     }
   }
 
+  // Decide which x-labels to show — every quarter-start (or first-of-year)
+  const labelMask = periodsWindow.map(p => {
+    const mm = +p.split('-')[1];
+    return mm === 1 || mm === 4 || mm === 7 || mm === 10;
+  });
+
   _root.querySelector('#mk-heat-sub').textContent =
-    `Top ${ys.length} banks · last ${periodsWindow.length} months · share % within ${state.category !== 'all' ? state.category : 'industry'}`;
+    `Top ${ys.length} banks · last ${periodsWindow.length} months · share % within ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
+
+  // Label visibility — only show in cells above a per-bank threshold so the
+  // grid stays readable; threshold scales with cell width.
+  const cellWide = periodsWindow.length <= 24;
+  const labelThreshold = cellWide ? 0.5 : 2.0;
 
   charts.heat.setOption({
-    grid: { left: 170, right: 30, top: 20, bottom: 70 },
+    grid: { left: 180, right: 30, top: 18, bottom: 56 },
     tooltip: { ...TOOLTIP_BASE, trigger: 'item',
       formatter: (p) => {
         const [xi, yi, v] = p.data;
         return `<div style="font-weight:600;margin-bottom:4px">${ys[yi]}</div>
-                <div>${periodLabel(periodsWindow[xi])}: <b>${v === '-' ? '—' : v + '%'}</b></div>`;
+                <div style="color:#cbd2dc;font-size:11px;margin-bottom:6px">${periodLabel(periodsWindow[xi])}</div>
+                <div>Share: <b>${v === '-' ? '—' : v + '%'}</b></div>`;
       },
     },
     xAxis: { type: 'category', data: periodsWindow.map(periodLabel),
-      axisLine: { lineStyle: { color: '#cbd2dc' } },
-      axisLabel: { color: '#64748b', fontSize: 10, interval: Math.ceil(periodsWindow.length / 18) - 1, rotate: 0 },
+      axisLine: { lineStyle: { color: '#e3e6ec' } },
       axisTick: { show: false },
+      axisLabel: { color: '#64748b', fontSize: 10, fontWeight: 500,
+        interval: (idx) => labelMask[idx],
+        formatter: (v) => v },
       splitArea: { show: false } },
     yAxis: { type: 'category', data: ys,
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: '#334155', fontSize: 11, fontWeight: 500,
-        formatter: (v) => v.length > 22 ? v.slice(0, 21) + '…' : v },
+      axisLabel: { color: '#0f172a', fontSize: 11.5, fontWeight: 600,
+        formatter: (v) => v.length > 24 ? v.slice(0, 23) + '…' : v },
       splitArea: { show: false } },
     visualMap: {
       min: 0, max: Math.max(1, Math.ceil(maxV)),
-      orient: 'horizontal', left: 'center', bottom: 6,
-      itemWidth: 14, itemHeight: 8,
-      textStyle: { color: '#64748b', fontSize: 10 },
-      inRange: { color: ['#eef2ff', '#c7d2fe', '#818cf8', '#6366f1', '#4f46e5', '#3730a3'] },
+      orient: 'horizontal', left: 'center', bottom: 4,
+      itemWidth: 220, itemHeight: 8,
+      text: ['high', 'low'],
+      textStyle: { color: '#64748b', fontSize: 10, fontWeight: 500 },
+      inRange: {
+        // White → cyan → indigo → deep indigo. Better mid-range contrast.
+        color: ['#f8fafd', '#dbeafe', '#a5b4fc', '#6366f1', '#4338ca', '#312e81'],
+      },
+      calculable: false,
     },
     series: [{
       type: 'heatmap', data,
-      label: { show: false },
-      emphasis: { itemStyle: { shadowBlur: 6, shadowColor: 'rgba(15,23,42,0.25)' } },
+      itemStyle: { borderRadius: 3, borderColor: '#ffffff', borderWidth: 1 },
+      label: {
+        show: true,
+        color: '#0f172a', fontSize: 10, fontWeight: 600,
+        formatter: (p) => {
+          const v = p.data[2];
+          if (v === '-' || v == null) return '';
+          if (v < labelThreshold) return '';
+          return v.toFixed(1);
+        },
+      },
+      emphasis: {
+        itemStyle: { borderColor: '#0f172a', borderWidth: 1.5, shadowBlur: 10, shadowColor: 'rgba(15,23,42,0.25)' },
+        label: { color: '#ffffff' },
+      },
       progressive: 1000, animation: true,
     }],
   }, true);
