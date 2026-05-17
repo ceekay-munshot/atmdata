@@ -33,7 +33,6 @@
       <button class="tab" data-tab="cards">Card Withdrawal</button>
       <button class="tab" data-tab="compare">Bank Comparison</button>
       <button class="tab" data-tab="market">Market Share</button>
-      <button class="tab" data-tab="ask">Ask</button>
       <button class="tab" data-tab="quality">Data Quality</button>
     </nav>
   </header>
@@ -46,6 +45,9 @@
     <span id="foot-meta"></span>
     <span class="foot-source">Source: Reserve Bank of India · rbi.org.in</span>
   </footer>
+
+  <!-- Floating chatbot (was the "Ask" tab; revert by re-adding tab + ask import in app.js) -->
+  <div id="chatbot-mount"></div>
 
   <script type="module" src="dashboard/js/app.js"></script>
 </body>

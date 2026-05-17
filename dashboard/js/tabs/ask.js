@@ -1,65 +1,22 @@
-// AI Ask tab — placeholder UI for future natural-language queries.
-// No fake AI responses. Example chips deep-link to the relevant tab
-// with the appropriate filters already applied — useful right now.
+// AI Ask tab (currently NOT mounted as a tab — see chatbot.js for the
+// floating-bubble version. Kept here for easy revert: re-register in
+// app.js TABS and re-add the tab button in index.html to restore.)
 
-import { setState } from '../state.js';
-import { rows } from '../data.js';
-import { rankBanks } from '../calc.js';
+import { CHIPS, applyChip } from '../chips.js';
 
 let _root = null;
-
-const CHIPS = [
-  {
-    label: 'Highest off-site ATM share gain',
-    icon: '↗',
-    apply: () => ({ tab: 'market', state: { metric: 'off_site', growthType: 'ShareChange', category: 'all' } }),
-  },
-  {
-    label: 'PSU bank 3M growth',
-    icon: '⏱',
-    apply: () => ({ tab: 'overview', state: { metric: 'dc_vol', growthType: '3M', category: 'Public Sector' } }),
-  },
-  {
-    label: 'SBI vs Canara vs PNB',
-    icon: '⚖',
-    apply: () => ({
-      tab: 'compare',
-      state: { metric: 'dc_vol', category: 'all',
-        banks: pickBanks(['STATE BANK OF INDIA', 'CANARA BANK', 'PUNJAB NATIONAL BANK']) },
-    }),
-  },
-  {
-    label: 'Micro ATM share losers',
-    icon: '↘',
-    apply: () => ({ tab: 'market', state: { metric: 'micro', growthType: 'ShareChange', category: 'all' } }),
-  },
-  {
-    label: 'Debit cash withdrawal leaders',
-    icon: '★',
-    apply: () => ({ tab: 'overview', state: { metric: 'dc_vol', view: 'absolute', category: 'all' } }),
-  },
-  {
-    label: 'Top 5 Private bank ATM footprint',
-    icon: '◆',
-    apply: () => ({ tab: 'market', state: { metric: 'on_site', category: 'Private Sector' } }),
-  },
-];
 
 const HTML = `
   <div class="ask-wrap">
     <div class="ask-hero">
-      <div class="ask-orb">
-        <div class="ask-orb-inner"></div>
-      </div>
+      <div class="ask-orb"><div class="ask-orb-inner"></div></div>
       <h1 class="ask-title">Ask</h1>
       <p class="ask-tagline">Natural-language analytics for RBI banking data. Coming soon.</p>
 
       <form class="ask-input-wrap" id="ask-form" autocomplete="off">
         <input class="ask-input" id="ask-input" type="text"
                placeholder="e.g. Which private bank gained the most off-site ATM share last year?" />
-        <button class="ask-submit" type="submit" title="Ask (coming soon)">
-          <span>Ask</span>
-        </button>
+        <button class="ask-submit" type="submit" title="Ask (coming soon)"><span>Ask</span></button>
       </form>
       <div class="ask-state" id="ask-state">
         <span class="ask-state-dot"></span> AI integration in progress · queries are not yet answered
@@ -85,9 +42,7 @@ export function mount(root) {
 
   root.querySelector('#ask-chips').onclick = (e) => {
     const btn = e.target.closest('.ask-chip'); if (!btn) return;
-    const def = CHIPS[+btn.dataset.i].apply();
-    if (def.state) setState(def.state);
-    if (def.tab) window.navigateTab && window.navigateTab(def.tab);
+    applyChip(+btn.dataset.i);
   };
 
   root.querySelector('#ask-form').onsubmit = (e) => {
@@ -101,10 +56,3 @@ export function mount(root) {
 }
 
 export function unmount() {}
-
-function pickBanks(preferred) {
-  const all = new Set(rows().map(r => r.bank));
-  // Match case-insensitively to deal with mixed-case names in the dataset
-  const map = new Map([...all].map(b => [b.toLowerCase(), b]));
-  return preferred.map(p => map.get(p.toLowerCase()) || preferred[0]).filter(Boolean);
-}

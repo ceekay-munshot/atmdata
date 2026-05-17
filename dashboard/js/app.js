@@ -7,10 +7,15 @@ import * as infrastructure from './tabs/infrastructure.js';
 import * as cards from './tabs/cards.js';
 import * as compare from './tabs/compare.js';
 import * as market from './tabs/market.js';
-import * as ask from './tabs/ask.js';
 import * as quality from './tabs/quality.js';
+// Ask is now a floating chatbot, not a tab. To revert to a tab:
+//   1. `import * as ask from './tabs/ask.js';`
+//   2. add `ask` to TABS below
+//   3. add <button class="tab" data-tab="ask">Ask</button> in index.html
+//   4. remove the chatbot import + mount below
+import { mount as mountChatbot } from './chatbot.js';
 
-const TABS = { overview, infrastructure, cards, compare, market, ask, quality };
+const TABS = { overview, infrastructure, cards, compare, market, quality };
 
 let currentTab = null;
 
@@ -27,9 +32,10 @@ async function boot() {
   mountFilters(document.querySelector('#filter-bar'));
   wireTabs();
   setFooter();
-  // Expose so tabs (e.g. Ask) can deep-link
+  // Expose so the chatbot (and any tab) can deep-link
   window.navigateTab = activateTab;
   activateTab('overview');
+  mountChatbot(document.querySelector('#chatbot-mount'));
 
   // hide veil
   const veil = document.querySelector('#loading-veil');
