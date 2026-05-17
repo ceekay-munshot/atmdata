@@ -19,6 +19,7 @@ let charts = {};
 let _root = null;
 let _unsub = null;
 let _sortState = { col: 'value', dir: 'desc' };
+let _tableShowAll = false;
 let _playing = null;
 
 const CARD_METRICS = ['dc_vol', 'dc_val_cr', 'cc_vol', 'cc_val_cr'];
@@ -394,6 +395,15 @@ function renderTable(state, allRows) {
     { id: 'shareDelta',  label: 'Share Δ',      num: true,  cell: r => deltaCell(r.shareDelta, ' pp') },
   ];
 
+  const visible = _tableShowAll ? sorted : sorted.slice(0, 10);
+  const moreNote = sorted.length > 10
+    ? `<div class="tbl-foot">
+         <button class="btn btn-toggle-more" id="card-table-more">
+           ${_tableShowAll ? 'Show top 10' : `Show all ${sorted.length}`}
+         </button>
+         <span class="tbl-foot-note">${_tableShowAll ? 'Showing all banks' : `Showing top 10 of ${sorted.length}`}</span>
+       </div>` : '';
+
   const wrap = _root.querySelector('#card-tbl');
   wrap.innerHTML = `
     <table class="tbl">
@@ -404,8 +414,8 @@ function renderTable(state, allRows) {
           return `<th class="sortable ${c.num ? 'num' : ''} ${sc}" data-col="${c.id}">${c.label}<span class="sort-ind">${ind}</span></th>`;
         }).join('')}
       </tr></thead>
-      <tbody>${sorted.map(r => `<tr>${cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.cell(r)}</td>`).join('')}</tr>`).join('')}</tbody>
-    </table>`;
+      <tbody>${visible.map(r => `<tr>${cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.cell(r)}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>${moreNote}`;
   wrap.querySelectorAll('thead th.sortable').forEach(th => {
     th.onclick = () => {
       const col = th.dataset.col;
@@ -414,6 +424,8 @@ function renderTable(state, allRows) {
       renderTable(state, allRows);
     };
   });
+  const mb = wrap.querySelector('#card-table-more');
+  if (mb) mb.onclick = () => { _tableShowAll = !_tableShowAll; renderTable(state, allRows); };
 }
 
 // ── Shared (mirrored locally) ───────────────────────────────────────────

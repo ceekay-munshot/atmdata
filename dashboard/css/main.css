@@ -238,6 +238,25 @@ button { font-family: inherit; cursor: pointer; }
   background-color: var(--bg-elev);
 }
 
+/* Month-picker input (used for From / To and base-period picker) */
+.fb-monthinput {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-elev);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px; font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  height: 36px;
+  min-width: 140px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 150ms, box-shadow 150ms, background-color 150ms;
+}
+.fb-monthinput:hover { border-color: var(--brand); background-color: var(--brand-soft); }
+.fb-monthinput:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); background-color: var(--bg-elev); }
+
 /* Segmented toggle — brand gradient on active */
 .fb-toggle {
   display: inline-flex;
@@ -466,6 +485,18 @@ table.tbl tbody td {
 table.tbl td.num, table.tbl th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.tbl tbody tr:hover td { background: var(--brand-soft); }
 table.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl-foot {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-tint);
+}
+.btn-toggle-more {
+  padding: 6px 14px; height: 30px;
+  font-size: 12px;
+}
+.tbl-foot-note { font-size: 12px; color: var(--fg-3); }
+
 .rank-cell {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 24px; height: 22px;

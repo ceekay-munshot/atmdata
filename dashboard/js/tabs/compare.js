@@ -10,7 +10,7 @@ import {
   growth, rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, indexTo100 } from '../chartopts.js';
 
 const ALL_CATEGORIES = ['Public Sector', 'Private Sector', 'Foreign Bank', 'Payment Bank', 'Small Finance Bank'];
 
@@ -21,6 +21,7 @@ const MAX_BANKS = 5;
 const MIN_BANKS = 2;
 let _playing = { trend: null, share: null };
 let _cache = { trend: { values: [], colors: [] }, share: { values: [], colors: [] } };
+let _indexedTrend = false;   // rebase trend lines to 100
 
 const HTML = `
   <div class="grid">
@@ -48,6 +49,10 @@ const HTML = `
             <div class="card-sub" id="cmp-trend-sub">—</div>
           </div>
           <div class="card-actions">
+            <div class="mini-toggle" id="cmp-trend-index" title="Rebase every line to 100 at the first period">
+              <button class="active" data-v="raw">Raw</button>
+              <button data-v="indexed">Index = 100</button>
+            </div>
             <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
             <button class="btn" data-export="trend">Export</button>
           </div>
@@ -109,6 +114,12 @@ export function mount(root) {
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
   root.querySelector('[data-action="play-trend"]').addEventListener('click', () => togglePlay('trend'));
   root.querySelector('[data-action="play-share"]').addEventListener('click', () => togglePlay('share'));
+  root.querySelector('#cmp-trend-index').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-v]'); if (!btn) return;
+    _indexedTrend = btn.dataset.v === 'indexed';
+    root.querySelectorAll('#cmp-trend-index button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
+    redraw();
+  });
   root.querySelector('#cmp-mode').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-v]'); if (!btn) return;
     const mode = btn.dataset.v;
@@ -273,20 +284,22 @@ function renderTrend(state, allRows) {
   });
 
   _root.querySelector('#cmp-trend-sub').textContent =
-    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'} · ${state.compareMode === 'categories' ? 'by category' : 'by bank'}`;
+    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'} · ${state.compareMode === 'categories' ? 'by category' : 'by bank'}${_indexedTrend ? ' · rebased to 100' : ''}`;
 
   const xs = sets[0].data.map(d => d.label);
+  const rawValues = sets.map(s => s.data.map(d => d.value));
+  const finalValues = _indexedTrend ? rawValues.map(indexTo100) : rawValues;
   const ss = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
     lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
-    data: s.data.map(d => d.value),
+    data: finalValues[i],
   }));
 
   _cache.trend = {
-    values: sets.map(s => s.data.map(d => d.value)),
+    values: finalValues,
     colors: sets.map((_, i) => PALETTE[i % PALETTE.length]),
   };
 
@@ -299,15 +312,17 @@ function renderTrend(state, allRows) {
         let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
         for (const p of params.sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))) {
           if (p.value == null) continue;
+          const valStr = _indexedTrend ? p.value.toFixed(1) : m.format(p.value);
           html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
-            ${truncate(p.seriesName, 24)}: <b>${m.format(p.value)}</b></div>`;
+            ${truncate(p.seriesName, 24)}: <b>${valStr}</b></div>`;
         }
         return html;
       },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
-    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => compactNum(v) } },
+    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
+      formatter: (v) => _indexedTrend ? v.toFixed(0) : compactNum(v) } },
     series: ss,
     animation: true, animationDuration: 600,
   }, true);

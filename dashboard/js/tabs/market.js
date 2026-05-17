@@ -12,7 +12,7 @@ import {
   rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, hexA } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, hexA, indexTo100 } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
@@ -21,6 +21,7 @@ let _heatmapWindow = 36;   // months
 let _heatmapMode = 'share';   // 'share' | 'delta'
 let _topN = 10;
 let _basePeriod = null;       // null = auto (YoY); otherwise YYYY-MM
+let _trendIndexed = false;    // rebase share-trend lines to 100
 let _playing = null;
 let _trendValuesCache = [];
 let _trendColorsCache = [];
@@ -34,6 +35,10 @@ const HTML = `
           <div class="card-sub" id="mk-sub">—</div>
         </div>
         <div class="card-actions">
+          <div class="mini-toggle" id="mk-trend-index" title="Rebase every line to 100 at the first period">
+            <button class="active" data-v="raw">Raw</button>
+            <button data-v="indexed">Index = 100</button>
+          </div>
           <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
           <div class="mini-toggle" id="mk-topn">
             <button data-v="5">Top 5</button>
@@ -130,6 +135,12 @@ export function mount(root) {
   const baseInput = root.querySelector('#mk-base');
   baseInput.addEventListener('change', () => {
     _basePeriod = baseInput.value || null;
+    redraw();
+  });
+  root.querySelector('#mk-trend-index').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-v]'); if (!btn) return;
+    _trendIndexed = btn.dataset.v === 'indexed';
+    root.querySelectorAll('#mk-trend-index button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
     redraw();
   });
 
@@ -231,19 +242,21 @@ function renderTrend(state, allRows, universe, topBanks) {
   });
 
   const xs = (sets[0]?.data || []).map(d => d.label);
+  const rawValues = sets.map(s => s.data.map(d => d.value));
+  const finalValues = _trendIndexed ? rawValues.map(indexTo100) : rawValues;
   const ss = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
     lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
-    data: s.data.map(d => d.value),
+    data: finalValues[i],
     endLabel: { show: true, color: PALETTE[i % PALETTE.length], fontWeight: 600, fontSize: 11,
-      formatter: (p) => p.value == null ? '' : ' ' + p.value.toFixed(1) + '%' },
+      formatter: (p) => p.value == null ? '' : (_trendIndexed ? ' ' + p.value.toFixed(0) : ' ' + p.value.toFixed(1) + '%') },
   }));
 
   // Cache for replay button
-  _trendValuesCache = sets.map(s => s.data.map(d => d.value));
+  _trendValuesCache = finalValues;
   _trendColorsCache = sets.map((_, i) => PALETTE[i % PALETTE.length]);
 
   charts.trend.setOption({
@@ -254,15 +267,17 @@ function renderTrend(state, allRows, universe, topBanks) {
         let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
         for (const p of params.sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))) {
           if (p.value == null) continue;
+          const v = _trendIndexed ? p.value.toFixed(1) : (p.value.toFixed(2) + '%');
           html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
-            ${truncate(p.seriesName, 22)}: <b>${p.value.toFixed(2)}%</b></div>`;
+            ${truncate(p.seriesName, 22)}: <b>${v}</b></div>`;
         }
         return html;
       },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
-    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => v.toFixed(1) + '%' } },
+    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
+      formatter: (v) => _trendIndexed ? v.toFixed(0) : (v.toFixed(1) + '%') } },
     series: ss,
     animation: true, animationDuration: 600,
   }, true);

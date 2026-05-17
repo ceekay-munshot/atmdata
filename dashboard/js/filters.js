@@ -97,15 +97,13 @@ function render() {
 
       <div class="fb-group">
         <span class="fb-label">From</span>
-        <select class="fb-select" id="f-from" style="min-width:120px">
-          ${ps.map(p => `<option value="${p}" ${p === fromVal ? 'selected' : ''}>${p}</option>`).join('')}
-        </select>
+        <input type="month" class="fb-input fb-monthinput" id="f-from"
+               min="${firstPeriod()}" max="${latestPeriod()}" value="${fromVal}">
       </div>
       <div class="fb-group">
         <span class="fb-label">To</span>
-        <select class="fb-select" id="f-to" style="min-width:120px">
-          ${ps.map(p => `<option value="${p}" ${p === toVal ? 'selected' : ''}>${p}</option>`).join('')}
-        </select>
+        <input type="month" class="fb-input fb-monthinput" id="f-to"
+               min="${firstPeriod()}" max="${latestPeriod()}" value="${toVal}">
       </div>
     </div>
 

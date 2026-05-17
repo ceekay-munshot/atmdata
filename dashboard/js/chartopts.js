@@ -124,6 +124,18 @@ export function latestGlowMarkPoint(xs, values, color) {
   };
 }
 
+// Rebase a series so its first non-null value is 100, then every value is
+// expressed as an index relative to that start (i.e. value / start * 100).
+// Useful for visually comparing growth rates across multiple lines that
+// have very different magnitudes.
+export function indexTo100(values) {
+  if (!values || !values.length) return values;
+  let base = null;
+  for (const v of values) { if (v != null && v !== 0) { base = v; break; } }
+  if (base == null) return values;
+  return values.map(v => v == null ? null : (v / base) * 100);
+}
+
 // Render a clean "no data" state inside any chart.
 export function setEmptyChart(chart, title = 'No data for this combination', subtitle = '') {
   chart.setOption({

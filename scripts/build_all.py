@@ -159,6 +159,39 @@ def _write_dashboard_artifacts() -> None:
             })
 
     periods = [pf[0] for pf in period_files]
+
+    # ── Canonicalise bank names ──────────────────────────────────────────
+    # Same bank often appears with different case/punctuation across years
+    # ("Bank of Baroda" in older files, "BANK OF BARODA" in newer ones).
+    # Collapse each variant to a single canonical name (the form that appears
+    # in the LATEST file). Without this, every aggregation under-counts long
+    # history because the variants are treated as different banks.
+    from collections import defaultdict
+    latest_period: dict[str, str] = {}
+    for r in flat:
+        b, p = r["bank"], r["period"]
+        if b not in latest_period or p > latest_period[b]:
+            latest_period[b] = p
+    norm_groups: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for b, p in latest_period.items():
+        norm_groups[_norm(b)].append((b, p))
+    canonical: dict[str, str] = {}
+    consolidated_count = 0
+    for variants in norm_groups.values():
+        if len(variants) <= 1:
+            continue
+        chosen = max(variants, key=lambda x: x[1])[0]  # latest-period wins
+        for variant, _ in variants:
+            if variant != chosen:
+                canonical[variant] = chosen
+                consolidated_count += 1
+    if canonical:
+        for r in flat:
+            if r["bank"] in canonical:
+                r["bank"] = canonical[r["bank"]]
+        # Recompute unique banks
+        banks = {r["bank"] for r in flat}
+
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "periods": periods,
@@ -171,7 +204,8 @@ def _write_dashboard_artifacts() -> None:
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2))
     FLAT.write_text(json.dumps(flat, separators=(",", ":")))
-    print(f"Wrote manifest ({len(periods)} periods) and flat.json ({len(flat)} rows; {override_hits} category overrides applied)")
+    print(f"Wrote manifest ({len(periods)} periods) and flat.json ({len(flat)} rows; "
+          f"{override_hits} category overrides, {consolidated_count} bank-name variants consolidated)")
 
 
 if __name__ == "__main__":

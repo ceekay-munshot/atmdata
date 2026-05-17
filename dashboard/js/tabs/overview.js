@@ -21,6 +21,7 @@ let charts = {};      // id → ECharts instance
 let _root = null;
 let _unsub = null;
 let _sortState = { col: 'value', dir: 'desc' };  // for bottom table
+let _tableShowAll = false;
 let _playing = null;  // active replay handle (for the trend chart)
 
 const HTML = `
@@ -511,6 +512,9 @@ function renderTable(state, allRows, filtered) {
   // sort by current sort state
   const sorted = sortRows(enriched, _sortState);
 
+  // Top 10 by default, with "+ Show more" toggle
+  const visibleRows = _tableShowAll ? sorted : sorted.slice(0, 10);
+
   const headerSub = `${m.label} · ${period} · ${state.category !== 'all' ? state.category + ' · ' : ''}${enriched.length} banks · growth vs ${refPeriod || '—'} (${state.growthType})`;
   _root.querySelector('#table-sub').textContent = headerSub;
 
@@ -525,6 +529,15 @@ function renderTable(state, allRows, filtered) {
     { id: 'shareDelta',  label: 'Share Δ',      num: true,  cell: r => deltaCell(r.shareDelta, ' pp') },
   ];
 
+  const showMoreNote = enriched.length > 10
+    ? `<div class="tbl-foot">
+         <button class="btn btn-toggle-more" id="ov-table-more">
+           ${_tableShowAll ? `Show top 10` : `Show all ${enriched.length}`}
+         </button>
+         <span class="tbl-foot-note">${_tableShowAll ? 'Showing all banks' : `Showing top 10 of ${enriched.length}`}</span>
+       </div>`
+    : '';
+
   wrap.innerHTML = `
     <table class="tbl">
       <thead><tr>
@@ -535,9 +548,10 @@ function renderTable(state, allRows, filtered) {
         }).join('')}
       </tr></thead>
       <tbody>
-        ${sorted.map(r => `<tr>${cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.cell(r)}</td>`).join('')}</tr>`).join('')}
+        ${visibleRows.map(r => `<tr>${cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.cell(r)}</td>`).join('')}</tr>`).join('')}
       </tbody>
     </table>
+    ${showMoreNote}
   `;
   wrap.querySelectorAll('thead th.sortable').forEach(th => {
     th.onclick = () => {
@@ -547,6 +561,8 @@ function renderTable(state, allRows, filtered) {
       renderTable(state, allRows, filtered);
     };
   });
+  const moreBtn = wrap.querySelector('#ov-table-more');
+  if (moreBtn) moreBtn.onclick = () => { _tableShowAll = !_tableShowAll; renderTable(state, allRows, filtered); };
 }
 
 function referencePeriod(period, growthType, freq) {
