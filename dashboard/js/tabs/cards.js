@@ -13,7 +13,7 @@ import {
   applyView, isPctView, compositionDescription,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
@@ -212,7 +212,7 @@ function renderTrend(state, allRows, filtered) {
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
     series: [{
       type: 'line', smooth: true, showSymbol: false,
-      lineStyle: { color, width: 2.6 },
+      lineStyle: softLineStyle(color, 2.6),
       areaStyle: { color: gradientArea(color) },
       markLine: mean != null ? {
         symbol: 'none', silent: true,
@@ -268,20 +268,21 @@ function renderCompare(state, allRows, filtered) {
     yAxis: [
       { type: 'value', name: 'Debit', position: 'left',
         nameTextStyle: { color: PALETTE[0], fontSize: 11, fontWeight: 600 },
-        axisLine: { show: false }, splitLine: { lineStyle: { color: '#e3e6ec', type: 'dashed' } },
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => compactNum(v) } },
+        axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: '#f1f5f9', type: 'solid', width: 1 } },
+        axisLabel: { color: '#94a3b8', fontSize: 10.5, fontWeight: 500, formatter: (v) => compactNum(v) } },
       { type: 'value', name: 'Credit', position: 'right',
         nameTextStyle: { color: PALETTE[3], fontSize: 11, fontWeight: 600 },
-        axisLine: { show: false }, splitLine: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => compactNum(v) } },
+        axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false },
+        axisLabel: { color: '#94a3b8', fontSize: 10.5, fontWeight: 500, formatter: (v) => compactNum(v) } },
     ],
     series: [
       { name: 'Debit', type: 'line', smooth: true, showSymbol: false, yAxisIndex: 0,
-        lineStyle: { color: PALETTE[0], width: 2.5 }, itemStyle: { color: PALETTE[0] },
+        lineStyle: softLineStyle(PALETTE[0], 2.5), itemStyle: { color: PALETTE[0] },
         areaStyle: { color: gradientArea(PALETTE[0]) },
         data: dcVals },
       { name: 'Credit', type: 'line', smooth: true, showSymbol: false, yAxisIndex: 1,
-        lineStyle: { color: PALETTE[3], width: 2.5 }, itemStyle: { color: PALETTE[3] },
+        lineStyle: softLineStyle(PALETTE[3], 2.5), itemStyle: { color: PALETTE[3] },
         data: ccVals },
     ],
     animation: true, animationDuration: 600,

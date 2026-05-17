@@ -15,7 +15,7 @@ import {
   applyView, isPctView, viewLabelShort, compositionDescription,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
 
 let charts = {};      // id → ECharts instance
 let _root = null;
@@ -220,7 +220,7 @@ function renderTrend(state, allRows, filtered) {
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
     series: [{
       type: 'line', smooth: true, showSymbol: false,
-      lineStyle: { color, width: 2.6 },
+      lineStyle: softLineStyle(color, 2.6),
       areaStyle: { color: gradientArea(color) },
       emphasis: { focus: 'series' },
       markLine: mean != null ? {
@@ -346,11 +346,12 @@ function renderRank(state, allRows, filtered) {
       },
     },
     xAxis: { type: 'value',
-      axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => compactNum(v) },
-      axisLine: { show: false }, splitLine: { lineStyle: { color: '#e3e6ec', type: 'dashed' } },
+      axisLabel: { color: '#94a3b8', fontSize: 10.5, fontWeight: 500, formatter: (v) => compactNum(v) },
+      axisLine: { show: false }, axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'solid', width: 1 } },
     },
     yAxis: { type: 'category', data: xs,
-      axisLabel: { color: '#334155', fontSize: 11, fontWeight: 500,
+      axisLabel: { color: '#334155', fontSize: 11.5, fontWeight: 600,
         formatter: (v) => v.length > 22 ? v.slice(0, 21) + '…' : v },
       axisLine: { show: false }, axisTick: { show: false },
     },
@@ -432,7 +433,7 @@ function renderShare(state, allRows, filtered) {
   const series_ = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
-    lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
+    lineStyle: softLineStyle(PALETTE[i % PALETTE.length], 2),
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
     data: s.data.map(d => d.value),

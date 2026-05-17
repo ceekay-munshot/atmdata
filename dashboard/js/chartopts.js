@@ -1,4 +1,6 @@
 // Shared ECharts option fragments — keeps every chart visually consistent.
+// Refined for a "boardroom" institutional look: subtle axes, near-invisible
+// gridlines, soft glow under lines, polished glass-style tooltip.
 
 export const PALETTE = [
   '#4f46e5', '#06b6d4', '#10b981', '#f59e0b',
@@ -10,37 +12,90 @@ export const UP = '#059669';
 export const DOWN = '#dc2626';
 export const FLAT = '#94a3b8';
 
+// Polished glass-style tooltip with shadow + backdrop blur
 export const TOOLTIP_BASE = {
   trigger: 'axis',
-  backgroundColor: 'rgba(15,23,42,0.94)',
+  backgroundColor: 'rgba(15, 23, 42, 0.94)',
   borderWidth: 0,
-  padding: [10, 14],
-  textStyle: { color: '#fff', fontSize: 12, fontFamily: 'Inter, sans-serif' },
-  extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,0.18); border-radius: 8px;',
+  borderRadius: 10,
+  padding: [11, 14],
+  textStyle: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 500,
+  },
+  extraCssText: 'box-shadow: 0 12px 32px rgba(15,23,42,0.22); border-radius: 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);',
+  axisPointer: {
+    type: 'line',
+    lineStyle: { color: '#cbd2dc', type: 'dashed', width: 1 },
+  },
 };
 
+// Clean X axis — no axis line, no tick marks, soft labels, no gridlines
 export const AXIS_X = {
   type: 'category',
-  axisLine: { lineStyle: { color: '#cbd2dc' } },
-  axisLabel: { color: '#64748b', fontSize: 11, fontFamily: 'Inter, sans-serif' },
+  axisLine: { show: false },
   axisTick: { show: false },
+  axisLabel: {
+    color: '#94a3b8',
+    fontSize: 10.5,
+    fontWeight: 500,
+    fontFamily: 'Inter, sans-serif',
+    margin: 14,
+  },
+  splitLine: { show: false },
 };
 
+// Clean Y axis — only faint horizontal split lines for reference
 export const AXIS_Y = {
   type: 'value',
   axisLine: { show: false },
-  splitLine: { lineStyle: { color: '#e3e6ec', type: 'dashed' } },
-  axisLabel: { color: '#64748b', fontSize: 11, fontFamily: 'Inter, sans-serif' },
+  axisTick: { show: false },
+  axisLabel: {
+    color: '#94a3b8',
+    fontSize: 10.5,
+    fontWeight: 500,
+    fontFamily: 'Inter, sans-serif',
+    margin: 14,
+  },
+  splitLine: {
+    show: true,
+    lineStyle: { color: '#f1f5f9', type: 'solid', width: 1 },
+  },
 };
 
+// Area gradient for trend charts — soft, fading to transparent
 export function gradientArea(color) {
   return {
     type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
     colorStops: [
-      { offset: 0, color: hexA(color, 0.22) },
-      { offset: 1, color: hexA(color, 0.02) },
+      { offset: 0,    color: hexA(color, 0.20) },
+      { offset: 0.55, color: hexA(color, 0.06) },
+      { offset: 1,    color: hexA(color, 0.00) },
     ],
   };
+}
+
+// Soft "premium" line style — adds a subtle coloured shadow under the
+// line, giving a refined glow without being noisy.
+export function softLineStyle(color, width = 2.4) {
+  return {
+    color,
+    width,
+    shadowColor: hexA(color, 0.28),
+    shadowBlur: 8,
+    shadowOffsetY: 4,
+    cap: 'round',
+    join: 'round',
+  };
+}
+
+export function hexA(hex, a) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
 export function compactNum(v) {
@@ -52,25 +107,17 @@ export function compactNum(v) {
   return Number(v.toFixed(2)).toString();
 }
 
-export function hexA(hex, a) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${a})`;
+// Rebase a series so its first non-null value is 100, then every value is
+// expressed as an index relative to that start.
+export function indexTo100(values) {
+  if (!values || !values.length) return values;
+  let base = null;
+  for (const v of values) { if (v != null && v !== 0) { base = v; break; } }
+  if (base == null) return values;
+  return values.map(v => v == null ? null : (v / base) * 100);
 }
 
 // ── Play / replay helper ────────────────────────────────────────────────
-// Progressively reveals each x-tick of a line chart over `durationMs`,
-// drawing a glowing "playhead" at the current frontier. Works for single
-// or multi-series. Returns { stop() } so the caller can cancel.
-//
-//   playReplay(chart, {
-//     seriesData: [[v1,v2,...],   // values for series 0
-//                  [u1,u2,...]],  // values for series 1 (optional)
-//     colors: ['#4f46e5', ...],
-//     durationMs: 2400,
-//     onProgress(i, N), onDone(),
-//   })
 export const PLAY_ICON =
   `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="7,4 20,12 7,20"/></svg>`;
 export const STOP_ICON =
@@ -112,7 +159,6 @@ export function playReplay(chart, opts) {
 // trend charts so the "current" frontier is always visible.
 export function latestGlowMarkPoint(xs, values, color) {
   if (!values || !values.length) return { data: [] };
-  // Find the last non-null index
   let last = values.length - 1;
   while (last >= 0 && values[last] == null) last--;
   if (last < 0) return { data: [] };
@@ -122,18 +168,6 @@ export function latestGlowMarkPoint(xs, values, color) {
       shadowColor: hexA(color, 0.55), shadowBlur: 14 },
     data: [{ coord: [last, values[last]], label: { show: false } }],
   };
-}
-
-// Rebase a series so its first non-null value is 100, then every value is
-// expressed as an index relative to that start (i.e. value / start * 100).
-// Useful for visually comparing growth rates across multiple lines that
-// have very different magnitudes.
-export function indexTo100(values) {
-  if (!values || !values.length) return values;
-  let base = null;
-  for (const v of values) { if (v != null && v !== 0) { base = v; break; } }
-  if (base == null) return values;
-  return values.map(v => v == null ? null : (v / base) * 100);
 }
 
 // Render a clean "no data" state inside any chart.

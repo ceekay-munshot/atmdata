@@ -13,7 +13,7 @@ import {
   applyView, isPctView, compositionDescription,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
 import { findChartAnnotations } from '../annotations.js';
 
 let charts = {};
@@ -236,7 +236,7 @@ function renderTrend(state, allRows, filtered) {
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
     series: [{
       type: 'line', smooth: true, showSymbol: false,
-      lineStyle: { color, width: 2.6 },
+      lineStyle: softLineStyle(color, 2.6),
       areaStyle: { color: gradientArea(color) },
       markLine: mean != null ? {
         symbol: 'none', silent: true,

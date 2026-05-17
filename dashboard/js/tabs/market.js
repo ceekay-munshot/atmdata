@@ -12,7 +12,7 @@ import {
   rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, hexA, indexTo100 } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, hexA, indexTo100, softLineStyle } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
@@ -247,7 +247,7 @@ function renderTrend(state, allRows, universe, topBanks) {
   const ss = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
-    lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
+    lineStyle: softLineStyle(PALETTE[i % PALETTE.length], 2.2),
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
     data: finalValues[i],
@@ -336,10 +336,11 @@ function renderChange(state, allRows, universe, period, topBanks) {
       },
     },
     xAxis: { type: 'value',
-      axisLabel: { color: '#64748b', fontSize: 11, formatter: (v) => (v > 0 ? '+' : '') + v.toFixed(1) + ' pp' },
-      axisLine: { show: false }, splitLine: { lineStyle: { color: '#e3e6ec', type: 'dashed' } } },
+      axisLabel: { color: '#94a3b8', fontSize: 10.5, fontWeight: 500, formatter: (v) => (v > 0 ? '+' : '') + v.toFixed(1) + ' pp' },
+      axisLine: { show: false }, axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'solid', width: 1 } } },
     yAxis: { type: 'category', data: xs,
-      axisLabel: { color: '#334155', fontSize: 11, fontWeight: 500,
+      axisLabel: { color: '#334155', fontSize: 11.5, fontWeight: 600,
         formatter: (v) => v.length > 22 ? v.slice(0, 21) + '…' : v },
       axisLine: { show: false }, axisTick: { show: false } },
     series: [{

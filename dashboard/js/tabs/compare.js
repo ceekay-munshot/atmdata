@@ -10,7 +10,7 @@ import {
   growth, rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, indexTo100 } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, indexTo100, softLineStyle } from '../chartopts.js';
 
 const ALL_CATEGORIES = ['Public Sector', 'Private Sector', 'Foreign Bank', 'Payment Bank', 'Small Finance Bank'];
 
@@ -292,7 +292,7 @@ function renderTrend(state, allRows) {
   const ss = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
-    lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
+    lineStyle: softLineStyle(PALETTE[i % PALETTE.length], 2.2),
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
     data: finalValues[i],
@@ -360,7 +360,7 @@ function renderShare(state, allRows) {
   const ss = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
-    lineStyle: { width: 2, color: PALETTE[i % PALETTE.length] },
+    lineStyle: softLineStyle(PALETTE[i % PALETTE.length], 2.2),
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
     data: s.data.map(d => d.value),
