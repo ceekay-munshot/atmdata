@@ -52,61 +52,65 @@ function render() {
   const banks = banksInCategory(s.category);
 
   _container.innerHTML = `
-    <div class="fb-group">
-      <span class="fb-label">Metric</span>
-      <select class="fb-select" id="f-metric" style="min-width:240px">
-        ${METRIC_OPTIONS.map(([v, l]) =>
-          `<option value="${v}" ${v === s.metric ? 'selected' : ''}>${l}</option>`).join('')}
-      </select>
+    <div class="fb-row">
+      <div class="fb-group">
+        <span class="fb-label">Metric</span>
+        <select class="fb-select" id="f-metric" style="min-width:240px">
+          ${METRIC_OPTIONS.map(([v, l]) =>
+            `<option value="${v}" ${v === s.metric ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="fb-group">
+        <span class="fb-label">Category</span>
+        <select class="fb-select" id="f-category" style="min-width:160px">
+          ${cats.map(c =>
+            `<option value="${c}" ${c === s.category ? 'selected' : ''}>${c === 'all' ? 'All categories' : c}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="fb-group">
+        <span class="fb-label">Bank</span>
+        <select class="fb-select" id="f-bank" style="min-width:220px">
+          <option value="">All banks</option>
+          ${banks.map(b =>
+            `<option value="${b}" ${s.banks[0] === b ? 'selected' : ''}>${b}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="fb-group">
+        <span class="fb-label">From</span>
+        <select class="fb-select" id="f-from" style="min-width:120px">
+          ${ps.map(p => `<option value="${p}" ${p === fromVal ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fb-group">
+        <span class="fb-label">To</span>
+        <select class="fb-select" id="f-to" style="min-width:120px">
+          ${ps.map(p => `<option value="${p}" ${p === toVal ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
+      </div>
     </div>
 
-    <div class="fb-group">
-      <span class="fb-label">Category</span>
-      <select class="fb-select" id="f-category">
-        ${cats.map(c =>
-          `<option value="${c}" ${c === s.category ? 'selected' : ''}>${c === 'all' ? 'All categories' : c}</option>`).join('')}
-      </select>
-    </div>
+    <div class="fb-row">
+      <div class="fb-group">
+        <span class="fb-label" title="How to bucket time">Frequency</span>
+        ${segmented('f-freq', FREQ_OPTIONS, s.freq)}
+      </div>
 
-    <div class="fb-group">
-      <span class="fb-label">Bank</span>
-      <select class="fb-select" id="f-bank" style="min-width:200px">
-        <option value="">All banks</option>
-        ${banks.map(b =>
-          `<option value="${b}" ${s.banks[0] === b ? 'selected' : ''}>${b}</option>`).join('')}
-      </select>
-    </div>
+      <div class="fb-group">
+        <span class="fb-label" title="Show raw values or each bank's % of the chosen denominator">View</span>
+        ${segmented('f-view', VIEW_OPTIONS, s.view)}
+      </div>
 
-    <div class="fb-group">
-      <span class="fb-label">From</span>
-      <select class="fb-select" id="f-from" style="min-width:120px">
-        ${ps.map(p => `<option value="${p}" ${p === fromVal ? 'selected' : ''}>${p}</option>`).join('')}
-      </select>
-    </div>
-    <div class="fb-group">
-      <span class="fb-label">To</span>
-      <select class="fb-select" id="f-to" style="min-width:120px">
-        ${ps.map(p => `<option value="${p}" ${p === toVal ? 'selected' : ''}>${p}</option>`).join('')}
-      </select>
-    </div>
+      <div class="fb-group">
+        <span class="fb-label" title="Drives the Growth/De-growth chart and the growth column in tables">Growth</span>
+        ${segmented('f-growth', GROWTH_OPTIONS, s.growthType)}
+      </div>
 
-    <div class="fb-group">
-      <span class="fb-label" title="How to bucket time">Frequency</span>
-      ${segmented('f-freq', FREQ_OPTIONS, s.freq)}
-    </div>
-
-    <div class="fb-group">
-      <span class="fb-label" title="Show raw values or each bank's % of the chosen denominator">View</span>
-      ${segmented('f-view', VIEW_OPTIONS, s.view)}
-    </div>
-
-    <div class="fb-group">
-      <span class="fb-label" title="Drives the Growth/De-growth chart and the growth column in tables">Growth</span>
-      ${segmented('f-growth', GROWTH_OPTIONS, s.growthType)}
-    </div>
-
-    <div class="fb-group actions no-divider">
-      <button class="btn" id="f-reset" title="Reset all filters">Reset</button>
+      <div class="fb-group actions no-divider">
+        <button class="btn" id="f-reset" title="Reset all filters">Reset</button>
+      </div>
     </div>
   `;
 

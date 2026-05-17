@@ -3,7 +3,7 @@
 //   2. Market share comparison chart (each bank's share %)
 //   3. Comparison table: Latest, 3M, YoY, Share, Share Δ pp, Rank
 
-import { rows, latestPeriod, allBanks, banksInCategory } from '../data.js';
+import { rows, latestPeriod, allBanks, allCategories, banksInCategory } from '../data.js';
 import { getState, subscribe, setState } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries,
@@ -11,6 +11,8 @@ import {
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON } from '../chartopts.js';
+
+const ALL_CATEGORIES = ['Public Sector', 'Private Sector', 'Foreign Bank', 'Payment Bank', 'Small Finance Bank'];
 
 let charts = {};
 let _root = null;
@@ -25,8 +27,14 @@ const HTML = `
     <div class="card accent">
       <div class="card-head">
         <div class="card-head-text">
-          <div class="card-title">Bank Comparison</div>
-          <div class="card-sub">Pick 2-5 banks to compare side-by-side. Bank filter in the top bar is shared.</div>
+          <div class="card-title" id="cmp-title">Bank Comparison</div>
+          <div class="card-sub" id="cmp-head-sub">Pick 2-5 banks to compare side-by-side.</div>
+        </div>
+        <div class="card-actions">
+          <div class="mini-toggle" id="cmp-mode">
+            <button data-v="banks" class="active">Banks</button>
+            <button data-v="categories">Categories</button>
+          </div>
         </div>
       </div>
       <div id="cmp-picker" class="cmp-picker"></div>
@@ -81,13 +89,17 @@ export function mount(root) {
   _root = root;
   root.innerHTML = HTML;
 
-  // Auto-seed picker with top 3 banks of current universe if user hasn't picked
   const s = getState();
-  if (!s.banks || s.banks.length < MIN_BANKS) {
+  // Auto-seed banks picker (when in banks mode)
+  if (s.compareMode === 'banks' && (!s.banks || s.banks.length < MIN_BANKS)) {
     const universe = (s.category && s.category !== 'all')
       ? rows().filter(r => r.category === s.category) : rows();
     const top = rankBanks(universe, s.metric, s.to || latestPeriod()).slice(0, 3).map(r => r.bank);
     setState({ banks: top });
+  }
+  // Auto-seed categories picker
+  if (s.compareMode === 'categories' && (!s.compareCategories || s.compareCategories.length < MIN_BANKS)) {
+    setState({ compareCategories: [...ALL_CATEGORIES] });
   }
 
   charts.trend = echarts.init(root.querySelector('#chart-cmp-trend'));
@@ -97,6 +109,16 @@ export function mount(root) {
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
   root.querySelector('[data-action="play-trend"]').addEventListener('click', () => togglePlay('trend'));
   root.querySelector('[data-action="play-share"]').addEventListener('click', () => togglePlay('share'));
+  root.querySelector('#cmp-mode').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-v]'); if (!btn) return;
+    const mode = btn.dataset.v;
+    if (mode === getState().compareMode) return;
+    setState({ compareMode: mode });
+    // On first switch to categories, auto-fill all 5
+    if (mode === 'categories' && (!getState().compareCategories || !getState().compareCategories.length)) {
+      setState({ compareCategories: [...ALL_CATEGORIES] });
+    }
+  });
 
   renderPicker();
   redraw();
@@ -140,10 +162,47 @@ function onResize() { for (const c of Object.values(charts)) c.resize(); }
 // ── Picker UI ───────────────────────────────────────────────────────────
 function renderPicker() {
   const s = getState();
-  const picked = s.banks.slice(0, MAX_BANKS);
-  const universe = banksInCategory(s.category).filter(b => !picked.includes(b));
+  // Sync mode toggle highlight + title
+  _root.querySelectorAll('#cmp-mode button').forEach(b => b.classList.toggle('active', b.dataset.v === s.compareMode));
+  _root.querySelector('#cmp-title').textContent =
+    s.compareMode === 'categories' ? 'Category Comparison' : 'Bank Comparison';
+  _root.querySelector('#cmp-head-sub').textContent =
+    s.compareMode === 'categories'
+      ? 'Pick 2-5 bank categories to compare side-by-side.'
+      : 'Pick 2-5 banks to compare side-by-side.';
 
   const el = _root.querySelector('#cmp-picker');
+  if (s.compareMode === 'categories') {
+    const picked = (s.compareCategories || []).slice(0, MAX_BANKS);
+    const available = ALL_CATEGORIES.filter(c => !picked.includes(c));
+    el.innerHTML = `
+      ${picked.map((c, i) => `
+        <span class="cmp-chip" style="--c:${PALETTE[i % PALETTE.length]}">
+          <span class="cmp-chip-dot"></span>${c}
+          <button class="cmp-chip-x" data-rm="${c}" title="Remove">×</button>
+        </span>`).join('')}
+      ${available.length && picked.length < MAX_BANKS ? `
+        <select class="fb-select cmp-add" id="cmp-add">
+          <option value="">+ Add category…</option>
+          ${available.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>` : ''}
+      ${picked.length < MIN_BANKS ? `<span class="cmp-hint warn">Pick at least ${MIN_BANKS} categories.</span>` : ''}
+    `;
+    el.querySelectorAll('[data-rm]').forEach(btn => {
+      btn.onclick = () => setState({ compareCategories: (getState().compareCategories || []).filter(c => c !== btn.dataset.rm) });
+    });
+    const add = el.querySelector('#cmp-add');
+    if (add) add.onchange = (e) => {
+      if (!e.target.value) return;
+      const next = [...(getState().compareCategories || []), e.target.value].slice(0, MAX_BANKS);
+      setState({ compareCategories: next });
+    };
+    return;
+  }
+
+  // banks mode
+  const picked = s.banks.slice(0, MAX_BANKS);
+  const universe = banksInCategory(s.category).filter(b => !picked.includes(b));
   el.innerHTML = `
     ${picked.map((b, i) => `
       <span class="cmp-chip" style="--c:${PALETTE[i % PALETTE.length]}">
@@ -168,13 +227,27 @@ function renderPicker() {
   };
 }
 
+// Entities currently being compared (banks or categories)
+function currentEntities(s) {
+  return s.compareMode === 'categories' ? (s.compareCategories || []) : (s.banks || []);
+}
+
+// For a given entity, return rows that contribute to it
+function rowsForEntity(allRows, name, mode) {
+  return mode === 'categories'
+    ? allRows.filter(r => r.category === name)
+    : allRows.filter(r => r.bank === name);
+}
+
 function redraw() {
   const s = getState();
   const allRows = rows();
-  if (s.banks.length < MIN_BANKS) {
-    setEmpty(charts.trend, 'Pick at least 2 banks to compare');
-    setEmpty(charts.share, 'Pick at least 2 banks to compare');
-    _root.querySelector('#cmp-tbl').innerHTML = '<div class="empty"><div class="empty-title">No comparison</div><div class="empty-sub">Add banks above to start comparing.</div></div>';
+  const entities = currentEntities(s);
+  const noun = s.compareMode === 'categories' ? 'categories' : 'banks';
+  if (entities.length < MIN_BANKS) {
+    setEmpty(charts.trend, `Pick at least 2 ${noun} to compare`);
+    setEmpty(charts.share, `Pick at least 2 ${noun} to compare`);
+    _root.querySelector('#cmp-tbl').innerHTML = `<div class="empty"><div class="empty-title">No comparison</div><div class="empty-sub">Add ${noun} above to start comparing.</div></div>`;
     return;
   }
   renderTrend(s, allRows);
@@ -193,13 +266,14 @@ function setEmpty(chart, msg) {
 // ── Trend Comparison ────────────────────────────────────────────────────
 function renderTrend(state, allRows) {
   const m = metric(state.metric);
-  const sets = state.banks.map(bank => {
-    const r = allRows.filter(row => row.bank === bank);
-    return { name: bank, data: series(r, state.metric, state.freq) };
+  const entities = currentEntities(state);
+  const sets = entities.map(name => {
+    const r = rowsForEntity(allRows, name, state.compareMode);
+    return { name, data: series(r, state.metric, state.freq) };
   });
 
   _root.querySelector('#cmp-trend-sub').textContent =
-    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'}`;
+    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'} · ${state.compareMode === 'categories' ? 'by category' : 'by bank'}`;
 
   const xs = sets[0].data.map(d => d.label);
   const ss = sets.map((s, i) => ({
@@ -242,15 +316,18 @@ function renderTrend(state, allRows) {
 // ── Share Comparison ────────────────────────────────────────────────────
 function renderShare(state, allRows) {
   const m = metric(state.metric);
-  const denom = denominatorRows(allRows, state);
+  // In categories mode the denominator is always industry (so categories sum
+  // to ~100% over time). In banks mode keep current behaviour.
+  const denom = state.compareMode === 'categories' ? allRows : denominatorRows(allRows, state);
   const denomSeries = series(denom, state.metric, state.freq);
   const denomMap = new Map(denomSeries.map(d => [d.key, d.value]));
 
-  const sets = state.banks.map(bank => {
-    const r = allRows.filter(row => row.bank === bank);
+  const entities = currentEntities(state);
+  const sets = entities.map(name => {
+    const r = rowsForEntity(allRows, name, state.compareMode);
     const s = series(r, state.metric, state.freq);
     return {
-      name: bank,
+      name,
       data: s.map(d => {
         const den = denomMap.get(d.key);
         const v = (den == null || den === 0 || d.value == null) ? null : (d.value / den) * 100;
@@ -260,7 +337,9 @@ function renderShare(state, allRows) {
   });
 
   _root.querySelector('#cmp-share-sub').textContent =
-    `Share of ${state.category !== 'all' ? state.category : 'industry'} · ${freqLabel(state.freq)}`;
+    state.compareMode === 'categories'
+      ? `Each category as % of industry · ${freqLabel(state.freq)}`
+      : `Share of ${state.category !== 'all' ? state.category : 'industry'} · ${freqLabel(state.freq)}`;
 
   const xs = (sets[0]?.data || []).map(d => d.label);
   const ss = sets.map((s, i) => ({
@@ -306,14 +385,6 @@ function renderShare(state, allRows) {
 function renderTable(state, allRows) {
   const m = metric(state.metric);
   const period = state.to || latestPeriod();
-
-  const denom = denominatorRows(allRows, state);
-  // industry-rank reference for the "Rank" column
-  const allRanked = rankBanks(state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category),
-                              state.metric, period);
-  const rankMap = new Map(allRanked.map((r, i) => [r.bank, i + 1]));
-
-  // For each selected bank: latest value, 3M %, YoY %, share %, share Δ pp (YoY)
   const periods = [...new Set(allRows.map(r => r.period))].sort();
   const idx = periods.indexOf(period);
   const ref3 = idx >= 3 ? periods[idx - 3] : null;
@@ -322,14 +393,26 @@ function renderTable(state, allRows) {
   const sumPerPeriod = (rs, per) =>
     rs.filter(r => r.period === per).reduce((s, r) => s + (r[m.field] ?? 0), 0);
 
+  // Categories mode: denominator = whole industry, no per-bank rank
+  // Banks mode: denominator = category (current global category filter)
+  const isCat = state.compareMode === 'categories';
+  const denom = isCat ? allRows : denominatorRows(allRows, state);
   const denomAt = new Map();
   for (const p of periods) denomAt.set(p, sumPerPeriod(denom, p));
 
-  const rowsOut = state.banks.map(bank => {
-    const br = allRows.filter(r => r.bank === bank);
-    const raw = sumPerPeriod(br, period);
-    const raw3 = ref3 ? sumPerPeriod(br, ref3) : null;
-    const raw12 = ref12 ? sumPerPeriod(br, ref12) : null;
+  const entities = currentEntities(state);
+  let rankMap = new Map();
+  if (!isCat) {
+    const allRanked = rankBanks(state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category),
+                                state.metric, period);
+    rankMap = new Map(allRanked.map((r, i) => [r.bank, i + 1]));
+  }
+
+  const rowsOut = entities.map((name, i) => {
+    const er = rowsForEntity(allRows, name, state.compareMode);
+    const raw = sumPerPeriod(er, period);
+    const raw3 = ref3 ? sumPerPeriod(er, ref3) : null;
+    const raw12 = ref12 ? sumPerPeriod(er, ref12) : null;
     const val = m.transform(raw);
     const val3 = raw3 != null ? m.transform(raw3) : null;
     const val12 = raw12 != null ? m.transform(raw12) : null;
@@ -341,18 +424,27 @@ function renderTable(state, allRows) {
     const sharePrev = (dPrev > 0 && raw12 != null) ? (raw12 / dPrev) * 100 : null;
     const shareDelta = (share != null && sharePrev != null) ? share - sharePrev : null;
     return {
-      bank, value: val, g3, gY, share, shareDelta,
-      rank: rankMap.get(bank) ?? null,
-      category: (br[0] || {}).category,
+      name, value: val, g3, gY, share, shareDelta,
+      rank: isCat ? (i + 1) : (rankMap.get(name) ?? null),
+      category: isCat ? null : ((er[0] || {}).category),
     };
   });
 
-  _root.querySelector('#cmp-tbl-sub').textContent =
-    `${m.label} · ${period} · 3M vs ${ref3 || '—'} · YoY vs ${ref12 || '—'} · rank within ${state.category !== 'all' ? state.category : 'industry'}`;
+  _root.querySelector('#cmp-tbl-sub').textContent = isCat
+    ? `${m.label} · ${period} · 3M vs ${ref3 || '—'} · YoY vs ${ref12 || '—'} · share = of industry`
+    : `${m.label} · ${period} · 3M vs ${ref3 || '—'} · YoY vs ${ref12 || '—'} · rank within ${state.category !== 'all' ? state.category : 'industry'}`;
 
-  const cols = [
+  const cols = isCat ? [
+    { id: 'rank',       label: '#',         num: true,  cell: r => `<span class="rank-cell">${r.rank}</span>` },
+    { id: 'name',       label: 'Category',  num: false, cell: r => `<span class="chip ${catSlug(r.name)}">${r.name}</span>` },
+    { id: 'value',      label: 'Latest',    num: true,  cell: r => m.format(r.value) },
+    { id: 'g3',         label: '3M',        num: true,  cell: r => deltaCell(r.g3, '%') },
+    { id: 'gY',         label: 'YoY',       num: true,  cell: r => deltaCell(r.gY, '%') },
+    { id: 'share',      label: 'Share',     num: true,  cell: r => r.share == null ? '—' : r.share.toFixed(2) + '%' },
+    { id: 'shareDelta', label: 'Share Δ',   num: true,  cell: r => deltaCell(r.shareDelta, ' pp') },
+  ] : [
     { id: 'rank',       label: 'Rank',     num: true,  cell: r => r.rank ? `<span class="rank-cell ${r.rank <= 3 ? 'top' : ''}">${r.rank}</span>` : '—' },
-    { id: 'bank',       label: 'Bank',     num: false, cell: r => r.bank },
+    { id: 'name',       label: 'Bank',     num: false, cell: r => r.name },
     { id: 'category',   label: 'Category', num: false, cell: r => r.category ? `<span class="chip ${catSlug(r.category)}">${shortCat(r.category)}</span>` : '—' },
     { id: 'value',      label: 'Latest',   num: true,  cell: r => m.format(r.value) },
     { id: 'g3',         label: '3M',       num: true,  cell: r => deltaCell(r.g3, '%') },
@@ -395,9 +487,13 @@ function onExport(which) {
   const stamp = new Date().toISOString().slice(0, 10);
   const sheets = [];
 
+  const entities = currentEntities(s);
+  const isCat = s.compareMode === 'categories';
+  const entityLabel = isCat ? 'Category' : 'Bank';
+
   if (which === 'trend' || which === 'all') {
-    const sets = s.banks.map(b => ({
-      name: b, data: series(allRows.filter(r => r.bank === b), s.metric, s.freq),
+    const sets = entities.map(name => ({
+      name, data: series(rowsForEntity(allRows, name, s.compareMode), s.metric, s.freq),
     }));
     const keys = (sets[0]?.data || []).map(d => d.key);
     const labels = (sets[0]?.data || []).map(d => d.label);
@@ -408,15 +504,16 @@ function onExport(which) {
   }
 
   if (which === 'share' || which === 'all') {
-    const denomSeries = series(denominatorRows(allRows, s), s.metric, s.freq);
+    const denom = isCat ? allRows : denominatorRows(allRows, s);
+    const denomSeries = series(denom, s.metric, s.freq);
     const denomMap = new Map(denomSeries.map(d => [d.key, d.value]));
-    const sets = s.banks.map(b => {
-      const ser = series(allRows.filter(r => r.bank === b), s.metric, s.freq);
+    const sets = entities.map(name => {
+      const ser = series(rowsForEntity(allRows, name, s.compareMode), s.metric, s.freq);
       const data = ser.map(d => {
         const den = denomMap.get(d.key);
         return { key: d.key, label: d.label, value: (den && d.value != null) ? (d.value / den) * 100 : null };
       });
-      return { name: b, data };
+      return { name, data };
     });
     const keys = (sets[0]?.data || []).map(d => d.key);
     const labels = (sets[0]?.data || []).map(d => d.label);
@@ -427,19 +524,18 @@ function onExport(which) {
   }
 
   if (which === 'all') {
-    // Comparison table snapshot
     const period = s.to || latestPeriod();
     const periods = [...new Set(allRows.map(r => r.period))].sort();
     const idx = periods.indexOf(period);
     const ref3 = idx >= 3 ? periods[idx - 3] : null;
     const ref12 = idx >= 12 ? periods[idx - 12] : null;
-    const denom = denominatorRows(allRows, s);
+    const denom = isCat ? allRows : denominatorRows(allRows, s);
     const sumPP = (rs, per) => rs.filter(r => r.period === per).reduce((sum, r) => sum + (r[m.field] ?? 0), 0);
-    const tbl = s.banks.map(b => {
-      const br = allRows.filter(r => r.bank === b);
-      const raw = sumPP(br, period);
-      const raw3 = ref3 ? sumPP(br, ref3) : null;
-      const raw12 = ref12 ? sumPP(br, ref12) : null;
+    const tbl = entities.map(name => {
+      const er = rowsForEntity(allRows, name, s.compareMode);
+      const raw = sumPP(er, period);
+      const raw3 = ref3 ? sumPP(er, ref3) : null;
+      const raw12 = ref12 ? sumPP(er, ref12) : null;
       const val = m.transform(raw);
       const v3 = raw3 != null ? m.transform(raw3) : null;
       const v12 = raw12 != null ? m.transform(raw12) : null;
@@ -449,10 +545,10 @@ function onExport(which) {
       const dP = ref12 ? sumPP(denom, ref12) : null;
       const sh = dN > 0 ? (raw / dN) * 100 : null;
       const shP = (dP > 0 && raw12 != null) ? (raw12 / dP) * 100 : null;
-      return [b, val, g3, gY, sh, (sh != null && shP != null) ? sh - shP : null];
+      return [name, val, g3, gY, sh, (sh != null && shP != null) ? sh - shP : null];
     });
     sheets.push({ name: 'Comparison Table',
-      rows: [['Bank', m.label + ' (latest)', '3M %', 'YoY %', 'Share %', 'Share Δ pp'], ...tbl] });
+      rows: [[entityLabel, m.label + ' (latest)', '3M %', 'YoY %', 'Share %', 'Share Δ pp'], ...tbl] });
   }
 
   exportSheets(`bank-comparison_${which}_${stamp}.xlsx`, sheets, currentFilterMeta());

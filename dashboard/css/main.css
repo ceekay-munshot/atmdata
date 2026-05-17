@@ -182,17 +182,26 @@ button { font-family: inherit; cursor: pointer; }
 .filter-bar {
   background: var(--bg-elev);
   border-bottom: 1px solid var(--line);
-  padding: 14px 32px;
-  display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px;
+  padding: 12px 32px;
+  display: flex; flex-direction: column; gap: 0;
   position: sticky; top: 93px; z-index: 40;
   box-shadow: var(--shadow-sm);
 }
+.fb-row {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 4px;
+  padding: 6px 0;
+}
+.fb-row + .fb-row {
+  border-top: 1px dashed var(--line);
+}
 .fb-group {
   display: inline-flex; flex-direction: column; gap: 4px;
-  padding: 0 12px;
+  padding: 0 14px;
   border-right: 1px solid var(--line);
 }
-.fb-group:last-of-type, .fb-group.no-divider { border-right: none; }
+.fb-group:first-child { padding-left: 0; }
+.fb-row > .fb-group:last-of-type { border-right: none; }
+.fb-group.no-divider { border-right: none; }
 .fb-group.actions { margin-left: auto; padding-right: 0; flex-direction: row; align-items: center; gap: 8px; }
 .fb-label {
   font-size: 10px;

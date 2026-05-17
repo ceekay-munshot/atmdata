@@ -14,6 +14,9 @@ const DEFAULTS = {
   // Tab-local toggles (Card tab)
   cardSide: 'debit',         // 'debit' | 'credit'
   cardMeasure: 'volume',     // 'volume' | 'value'
+  // Tab-local (Bank Comparison)
+  compareMode: 'banks',           // 'banks' | 'categories'
+  compareCategories: [],          // when compareMode === 'categories'
 };
 
 let _state = { ...DEFAULTS };
