@@ -123,3 +123,20 @@ export function latestGlowMarkPoint(xs, values, color) {
     data: [{ coord: [last, values[last]], label: { show: false } }],
   };
 }
+
+// Render a clean "no data" state inside any chart.
+export function setEmptyChart(chart, title = 'No data for this combination', subtitle = '') {
+  chart.setOption({
+    title: {
+      text: title, subtext: subtitle,
+      left: 'center', top: 'center',
+      textStyle: { color: '#64748b', fontWeight: 600, fontSize: 14 },
+      subtextStyle: { color: '#94a3b8', fontSize: 12, lineHeight: 18 },
+    },
+    xAxis: { show: false }, yAxis: { show: false },
+    grid: { show: false },
+    series: [],
+    legend: { show: false },
+    dataZoom: [],
+  }, true);
+}

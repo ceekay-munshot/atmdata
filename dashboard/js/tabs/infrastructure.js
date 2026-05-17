@@ -13,7 +13,7 @@ import {
   applyView, isPctView, compositionDescription,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
@@ -185,6 +185,14 @@ function renderTrend(state, allRows, filtered) {
   const valid = ys.filter(v => v != null);
   const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
 
+  if (!data.length || valid.length === 0) {
+    const bankNote = state.banks && state.banks.length
+      ? `${state.banks[0]} has no recorded ${m.short} in the selected range`
+      : 'No values recorded for this combination in the selected range';
+    setEmptyChart(charts.trend, 'No data', bankNote);
+    return;
+  }
+
   charts.trend.setOption({
     grid: { left: 70, right: 28, top: 24, bottom: 36 },
     tooltip: { ...TOOLTIP_BASE,
@@ -243,6 +251,11 @@ function renderGrowth(state, allRows, filtered) {
   else if (state.view === 'composition') suffix = ' · on composition %';
   _root.querySelector('#infra-growth-sub').textContent =
     `${m.short} · ${isShareChange ? 'Share Δ' : state.growthType}${suffix}`;
+
+  if (!base.length || base.every(d => d.value == null)) {
+    setEmptyChart(charts.growth, 'No data', 'No values to compute growth on');
+    return;
+  }
 
   const xs = base.map(d => d.label);
   const colored = gArr.map(v => {

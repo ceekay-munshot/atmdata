@@ -15,7 +15,7 @@ import {
   applyView, isPctView, viewLabelShort, compositionDescription,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart } from '../chartopts.js';
 
 let charts = {};      // id → ECharts instance
 let _root = null;
@@ -182,6 +182,17 @@ function renderTrend(state, allRows, filtered) {
   _root.querySelector('#trend-sub').textContent =
     `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'}${subSuffix}`;
 
+  // Empty-state handling: bank picked but metric never reported (e.g.
+  // Allahabad Bank merged in 2020, Micro ATMs only reported since 2020 —
+  // intersection is empty).
+  if (!data.length || data.every(d => d.value == null)) {
+    const bankNote = state.banks && state.banks.length
+      ? `${state.banks[0]} has no recorded ${m.short} in the selected range`
+      : 'No values recorded for this combination in the selected range';
+    setEmptyChart(charts.trend, 'No data', bankNote);
+    return;
+  }
+
   const xs = data.map(d => d.label);
   const ys = data.map(d => d.value);
   const color = PALETTE[0];
@@ -255,6 +266,11 @@ function renderGrowth(state, allRows, filtered) {
   else if (state.view === 'composition') growthBase = ' · on composition %';
   _root.querySelector('#growth-sub').textContent =
     `${m.short} · ${state.growthType === 'ShareChange' ? 'Share Δ' : state.growthType}${growthBase}`;
+
+  if (!base.length || base.every(d => d.value == null)) {
+    setEmptyChart(charts.growth, 'No data', 'No values to compute growth on');
+    return;
+  }
 
   const xs = base.map(d => d.label);
   const colored = gArr.map(v => {
