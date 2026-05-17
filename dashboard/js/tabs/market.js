@@ -488,32 +488,9 @@ function renderHeatmap(state, universe, period, topBanks) {
     series: [{
       type: 'heatmap', data,
       itemStyle: { borderRadius: 3, borderColor: '#ffffff', borderWidth: 1 },
-      label: {
-        show: true,
-        fontSize: cellWide ? 11 : 10, fontWeight: 600,
-        // Dark text on light cells, white on dark — picked per-piece via colour
-        color: (params) => {
-          const v = params.data[2];
-          if (v === '-' || v == null) return 'transparent';
-          if (_heatmapMode === 'delta') {
-            // Strong colours (|v| >= 0.1) get white text; lighter cells dark
-            return Math.abs(v) > 0.1 ? '#ffffff' : '#0f172a';
-          }
-          return v >= 10 ? '#ffffff' : '#0f172a';
-        },
-        formatter: (p) => {
-          const v = p.data[2];
-          if (v === '-' || v == null) return '';
-          if (_heatmapMode === 'delta') {
-            // skip nearly-zero so the white cells stay clean
-            if (Math.abs(v) < 0.05) return '';
-            return (v > 0 ? '+' : '') + v.toFixed(2);
-          }
-          // share %: skip very small to keep the grid readable
-          if (v < (cellWide ? 0.5 : 2)) return '';
-          return v.toFixed(1);
-        },
-      },
+      // No in-cell labels — they collide at high cell counts. Value is in
+      // the tooltip on hover and in the Excel export.
+      label: { show: false },
       emphasis: {
         itemStyle: { borderColor: '#0f172a', borderWidth: 1.5, shadowBlur: 10, shadowColor: 'rgba(15,23,42,0.28)' },
       },
