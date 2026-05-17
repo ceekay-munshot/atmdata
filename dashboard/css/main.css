@@ -519,6 +519,31 @@ table.tbl tbody tr:last-child td { border-bottom: none; }
 .mk-mov th { font-size: 10px !important; padding: 6px 10px !important; }
 .mk-mov td { padding: 7px 10px !important; }
 
+/* ─── Data Quality banner ──────────────────────────────────────────────── */
+.dq-banner {
+  background: var(--brand-grad-soft);
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+}
+.dq-banner-inner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: 12.5px;
+  color: var(--fg-2);
+}
+.dq-banner-tag {
+  font-size: 10px; font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.dq-banner-val {
+  font-weight: 700; color: var(--fg);
+  background: rgba(255,255,255,0.9);
+  padding: 2px 8px; border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.dq-banner-sep { color: var(--fg-4); }
+
 /* ─── Data Quality ─────────────────────────────────────────────────────── */
 .dq-card {
   padding: 16px 18px;

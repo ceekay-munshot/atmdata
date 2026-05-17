@@ -1,15 +1,19 @@
 // Data Quality tab — coverage, gaps, reconciliation. Real computations
 // against the loaded dataset; no fake numbers.
+// Responds to the global From/To and Category filters.
 
-import { rows, manifest, periods as periodsList, allBanks, allCategories } from '../data.js';
-import { METRICS } from '../calc.js';
+import { rows, manifest, periods as periodsList, firstPeriod, latestPeriod } from '../data.js';
+import { getState, subscribe } from '../state.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 
 let _root = null;
+let _unsub = null;
 let _errorsText = '';
 
 const HTML = `
   <div class="grid">
+    <div class="dq-banner" id="dq-banner"></div>
+
     <!-- Validation cards row -->
     <div class="grid grid-3" id="dq-cards"></div>
 
@@ -29,7 +33,7 @@ const HTML = `
         <div class="card-head">
           <div class="card-head-text">
             <div class="card-title">Bank-name Hygiene</div>
-            <div class="card-sub">Unmapped categories + potential duplicates</div>
+            <div class="card-sub" id="dq-bank-sub">Unmapped categories + potential duplicates (within selected range)</div>
           </div>
         </div>
         <div id="dq-bank-issues"></div>
@@ -41,18 +45,18 @@ const HTML = `
       <div class="card-head">
         <div class="card-head-text">
           <div class="card-title">Suspicious Month-over-month Moves</div>
-          <div class="card-sub">Industry-total %Δ exceeding ±30% (volume/value) or ±15% (stock)</div>
+          <div class="card-sub" id="dq-out-sub">Industry-total %Δ exceeding ±30% (volume/value) or ±15% (stock)</div>
         </div>
       </div>
       <div class="tbl-wrap" id="dq-outliers"></div>
     </div>
 
-    <!-- Parser error log -->
+    <!-- Parser error log (global) -->
     <div class="card">
       <div class="card-head">
         <div class="card-head-text">
           <div class="card-title">Parser / Source Log</div>
-          <div class="card-sub">Files RBI published that we could not parse (see data/_errors.log)</div>
+          <div class="card-sub">Files RBI published that we could not parse — global, not affected by date filter</div>
         </div>
         <div class="card-actions">
           <button class="btn primary" data-export="all">Export Data Quality Report</button>
@@ -68,54 +72,85 @@ export function mount(root) {
   root.innerHTML = HTML;
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
 
-  // Pull _errors.log (best-effort)
   fetch('data/_errors.log')
     .then(r => r.ok ? r.text() : '')
     .catch(() => '')
     .then(t => { _errorsText = t || '(no parser errors logged)'; renderErrorLog(); });
 
   render();
+  _unsub = subscribe(render);
 }
 
-export function unmount() {}
+export function unmount() {
+  if (_unsub) { _unsub(); _unsub = null; }
+}
 
 function render() {
-  renderCards();
-  renderMissing();
-  renderBankIssues();
-  renderOutliers();
+  const state = getState();
+  const range = resolvedRange(state);
+  renderBanner(state, range);
+  renderCards(state, range);
+  renderMissing(state, range);
+  renderBankIssues(state, range);
+  renderOutliers(state, range);
   renderErrorLog();
 }
 
-// ── Validation cards ────────────────────────────────────────────────────
-function renderCards() {
-  const m = manifest();
-  const allRows = rows();
+function resolvedRange(state) {
+  return { from: state.from || firstPeriod(), to: state.to || latestPeriod() };
+}
 
-  const expected = monthsBetween(m.first_period, m.latest_period);
-  const have = new Set(m.periods);
-  const missing = expected.filter(p => !have.has(p));
-
-  const unmapped = new Set();
-  const banks = new Set();
-  for (const r of allRows) {
-    banks.add(r.bank);
-    if (!r.category) unmapped.add(r.bank);
+function filteredRows(state, range) {
+  let out = rows();
+  out = out.filter(r => r.period >= range.from && r.period <= range.to);
+  if (state.category && state.category !== 'all') {
+    out = out.filter(r => r.category === state.category);
   }
+  return out;
+}
+
+// ── Banner reminding the user what's currently filtered ─────────────────
+function renderBanner(state, range) {
+  const banner = _root.querySelector('#dq-banner');
+  const catLabel = state.category && state.category !== 'all' ? state.category : 'All categories';
+  banner.innerHTML = `
+    <div class="dq-banner-inner">
+      <span class="dq-banner-tag">Showing</span>
+      <span class="dq-banner-val">${range.from}</span> →
+      <span class="dq-banner-val">${range.to}</span>
+      <span class="dq-banner-sep">·</span>
+      <span class="dq-banner-val">${catLabel}</span>
+      <span class="dq-banner-sep">·</span>
+      <span class="dq-banner-tag">change the From / To / Category in the top bar to refocus</span>
+    </div>`;
+}
+
+// ── Validation cards ────────────────────────────────────────────────────
+function renderCards(state, range) {
+  const m = manifest();
+  const filt = filteredRows(state, range);
+
+  const expected = monthsBetween(range.from, range.to);
+  const have = new Set(filt.map(r => r.period));
+  const missing = expected.filter(p => !have.has(p));
+  const banks = new Set(filt.map(r => r.bank));
+  const unmapped = new Set(filt.filter(r => !r.category).map(r => r.bank));
 
   const cards = [
-    { label: 'Latest data month',    value: m.latest_period, tone: 'brand' },
-    { label: 'Data range',           value: `${m.first_period} → ${m.latest_period}`,
-      sub: `${m.period_count} months published / ${expected.length} expected` },
-    { label: 'Banks observed',       value: m.bank_count.toString(),
-      sub: `${unmapped.size} without category mapping`, tone: unmapped.size > 0 ? 'warn' : null },
-    { label: 'Missing months',       value: missing.length.toString(),
-      sub: missing.length ? `coverage gap = ${(missing.length/expected.length*100).toFixed(1)}%` : 'no gaps',
-      tone: missing.length === 0 ? 'up' : missing.length > 20 ? 'down' : 'warn' },
-    { label: 'Generated at',         value: m.generated_at.slice(0, 16).replace('T', ' ') + ' UTC',
-      sub: 'auto-refreshed by GitHub Action twice a month' },
-    { label: 'Source',               value: 'rbi.org.in',
-      sub: 'Bankwise ATM/POS/Card Statistics (Data Releases)' },
+    { label: 'Selected latest', value: range.to, tone: 'brand',
+      sub: 'latest month in current selection' },
+    { label: 'Selected range', value: `${range.from} → ${range.to}`,
+      sub: `${have.size} months published / ${expected.length} expected` },
+    { label: 'Banks in range',  value: banks.size.toString(),
+      sub: unmapped.size ? `${unmapped.size} without category` : 'all categorised',
+      tone: unmapped.size > 0 ? 'warn' : null },
+    { label: 'Missing months',  value: missing.length.toString(),
+      sub: missing.length ? `${(missing.length / expected.length * 100).toFixed(1)}% gap` : 'no gaps',
+      tone: missing.length === 0 ? 'up' : missing.length > 12 ? 'down' : 'warn' },
+    { label: 'Dataset latest',  value: m.latest_period,
+      sub: m.first_period + ' → ' + m.latest_period + ' (' + m.period_count + ' months total)' },
+    { label: 'Generated at',    value: m.generated_at.slice(0, 16).replace('T', ' ') + ' UTC',
+      sub: 'auto-refreshed by GitHub Action twice a month · source: rbi.org.in' },
   ];
 
   _root.querySelector('#dq-cards').innerHTML = cards.map(c => `
@@ -127,13 +162,12 @@ function renderCards() {
 }
 
 // ── Missing months table ────────────────────────────────────────────────
-function renderMissing() {
-  const m = manifest();
-  const expected = monthsBetween(m.first_period, m.latest_period);
-  const have = new Set(m.periods);
+function renderMissing(state, range) {
+  const filt = filteredRows(state, range);
+  const expected = monthsBetween(range.from, range.to);
+  const have = new Set(filt.map(r => r.period));
   const missing = expected.filter(p => !have.has(p));
 
-  // Group by year
   const byYear = new Map();
   for (const p of missing) {
     const y = p.split('-')[0];
@@ -143,11 +177,11 @@ function renderMissing() {
   const years = [...byYear.keys()].sort();
 
   _root.querySelector('#dq-miss-sub').textContent =
-    missing.length ? `${missing.length} of ${expected.length} months not published or unparsed` : 'No gaps';
+    missing.length ? `${missing.length} of ${expected.length} months not published or unparsed in selected range` : 'No gaps in selected range';
 
   const wrap = _root.querySelector('#dq-missing');
   if (!missing.length) {
-    wrap.innerHTML = `<div class="empty"><div class="empty-title">All months present</div><div class="empty-sub">No gaps between ${m.first_period} and ${m.latest_period}.</div></div>`;
+    wrap.innerHTML = `<div class="empty"><div class="empty-title">All months present</div><div class="empty-sub">No gaps between ${range.from} and ${range.to}.</div></div>`;
     return;
   }
   wrap.innerHTML = `
@@ -161,18 +195,17 @@ function renderMissing() {
     </table>`;
 }
 
-// ── Bank issues: unmapped + duplicates ──────────────────────────────────
-function renderBankIssues() {
-  const allRows = rows();
-  const byBank = new Map();   // bank → category set
-  for (const r of allRows) {
+// ── Bank issues: unmapped + duplicates + reclassifications ─────────────
+function renderBankIssues(state, range) {
+  const filt = filteredRows(state, range);
+  const byBank = new Map();
+  for (const r of filt) {
     if (!byBank.has(r.bank)) byBank.set(r.bank, new Set());
     if (r.category) byBank.get(r.bank).add(r.category);
   }
   const unmapped = [];
   for (const [b, cats] of byBank) if (cats.size === 0) unmapped.push(b);
 
-  // Potential dupes: same normalised name
   const normMap = new Map();
   for (const b of byBank.keys()) {
     const k = b.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -181,14 +214,12 @@ function renderBankIssues() {
   }
   const dupes = [...normMap.values()].filter(g => g.length > 1);
 
-  // Banks where category changed across months (data inconsistency)
   const reclassified = [];
   for (const [b, cats] of byBank) if (cats.size > 1) reclassified.push({ bank: b, cats: [...cats] });
 
   let html = '';
-
   if (unmapped.length === 0 && dupes.length === 0 && reclassified.length === 0) {
-    html = `<div class="empty"><div class="empty-title">Looks clean</div><div class="empty-sub">No unmapped banks, duplicates, or reclassifications detected.</div></div>`;
+    html = `<div class="empty"><div class="empty-title">Looks clean</div><div class="empty-sub">No unmapped banks, duplicates, or reclassifications detected in the selected range.</div></div>`;
   } else {
     if (unmapped.length) {
       html += `<div class="dq-section">
@@ -215,44 +246,46 @@ function renderBankIssues() {
 }
 
 // ── Suspicious outliers ─────────────────────────────────────────────────
-function renderOutliers() {
-  const allRows = rows();
-  const periods = periodsList();
+function renderOutliers(state, range) {
+  const filt = filteredRows(state, range);
+  const periodsInRange = [...new Set(filt.map(r => r.period))].sort();
 
-  const STOCK = new Set(['on_site_atms', 'off_site_atms', 'micro_atms']);
   const fields = [
-    { f: 'on_site_atms',     label: 'On-site ATMs',     stock: true,  thr: 15 },
-    { f: 'off_site_atms',    label: 'Off-site ATMs',    stock: true,  thr: 15 },
-    { f: 'micro_atms',       label: 'Micro ATMs',       stock: true,  thr: 25 },
-    { f: 'dc_vol',           label: 'Debit Cash W/D Vol', stock: false, thr: 30 },
-    { f: 'dc_val_thousands', label: 'Debit Cash W/D Val', stock: false, thr: 30 },
-    { f: 'cc_vol',           label: 'Credit Cash W/D Vol', stock: false, thr: 30 },
-    { f: 'cc_val_thousands', label: 'Credit Cash W/D Val', stock: false, thr: 30 },
+    { f: 'on_site_atms',     label: 'On-site ATMs',     thr: 15 },
+    { f: 'off_site_atms',    label: 'Off-site ATMs',    thr: 15 },
+    { f: 'micro_atms',       label: 'Micro ATMs',       thr: 25 },
+    { f: 'dc_vol',           label: 'Debit Cash W/D Vol', thr: 30 },
+    { f: 'dc_val_thousands', label: 'Debit Cash W/D Val', thr: 30 },
+    { f: 'cc_vol',           label: 'Credit Cash W/D Vol', thr: 30 },
+    { f: 'cc_val_thousands', label: 'Credit Cash W/D Val', thr: 30 },
   ];
 
   const outliers = [];
   for (const { f, label, thr } of fields) {
     const total = new Map();
-    for (const r of allRows) {
+    for (const r of filt) {
       const v = r[f];
       if (v == null) continue;
       total.set(r.period, (total.get(r.period) ?? 0) + v);
     }
-    for (let i = 1; i < periods.length; i++) {
-      const cur = total.get(periods[i]);
-      const prev = total.get(periods[i - 1]);
+    for (let i = 1; i < periodsInRange.length; i++) {
+      const cur = total.get(periodsInRange[i]);
+      const prev = total.get(periodsInRange[i - 1]);
       if (cur == null || prev == null || prev === 0) continue;
       const pct = ((cur - prev) / prev) * 100;
       if (Math.abs(pct) >= thr) {
-        outliers.push({ period: periods[i], prev: periods[i - 1], metric: label, prevVal: prev, curVal: cur, pct });
+        outliers.push({ period: periodsInRange[i], prev: periodsInRange[i - 1], metric: label, prevVal: prev, curVal: cur, pct });
       }
     }
   }
   outliers.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
 
+  _root.querySelector('#dq-out-sub').textContent =
+    `Within ${range.from} → ${range.to} · ${state.category !== 'all' ? state.category : 'industry'} aggregates · ${outliers.length} flagged`;
+
   const wrap = _root.querySelector('#dq-outliers');
   if (!outliers.length) {
-    wrap.innerHTML = `<div class="empty"><div class="empty-title">No suspicious moves</div><div class="empty-sub">All month-over-month industry totals are within tolerance.</div></div>`;
+    wrap.innerHTML = `<div class="empty"><div class="empty-title">No suspicious moves</div><div class="empty-sub">All month-over-month totals are within tolerance for the selected range.</div></div>`;
     return;
   }
   const top = outliers.slice(0, 30);
@@ -279,7 +312,6 @@ function renderOutliers() {
 function renderErrorLog() {
   const pre = _root && _root.querySelector('#dq-errors');
   if (!pre) return;
-  // Trim to first ~80 lines, keep size reasonable
   const lines = (_errorsText || '').split(/\r?\n/);
   pre.textContent = lines.slice(0, 200).join('\n') + (lines.length > 200 ? `\n…(${lines.length - 200} more lines)` : '');
 }
@@ -309,14 +341,17 @@ function fmtNum(v) {
 
 // ── Export ──────────────────────────────────────────────────────────────
 function onExport() {
+  const state = getState();
+  const range = resolvedRange(state);
   const m = manifest();
-  const allRows = rows();
-  const expected = monthsBetween(m.first_period, m.latest_period);
-  const have = new Set(m.periods);
+  const filt = filteredRows(state, range);
+
+  const expected = monthsBetween(range.from, range.to);
+  const have = new Set(filt.map(r => r.period));
   const missing = expected.filter(p => !have.has(p));
 
   const byBank = new Map();
-  for (const r of allRows) {
+  for (const r of filt) {
     if (!byBank.has(r.bank)) byBank.set(r.bank, new Set());
     if (r.category) byBank.get(r.bank).add(r.category);
   }
@@ -325,24 +360,22 @@ function onExport() {
   const sheets = [
     { name: 'Coverage', rows: [
       ['Field', 'Value'],
-      ['Latest data month', m.latest_period],
-      ['First data month', m.first_period],
-      ['Total periods published', m.period_count],
-      ['Total expected periods', expected.length],
-      ['Coverage %', expected.length ? ((m.period_count / expected.length) * 100).toFixed(2) + '%' : '—'],
-      ['Banks observed', m.bank_count],
-      ['Categories', m.categories.join(', ')],
+      ['Selection — from', range.from],
+      ['Selection — to', range.to],
+      ['Selection — category', state.category],
+      ['Months in selection', have.size],
+      ['Expected months', expected.length],
+      ['Coverage %', expected.length ? ((have.size / expected.length) * 100).toFixed(2) + '%' : '—'],
+      ['Banks in selection', new Set(filt.map(r => r.bank)).size],
+      [],
+      ['Dataset latest', m.latest_period],
+      ['Dataset first', m.first_period],
+      ['Dataset total periods', m.period_count],
       ['Manifest generated at', m.generated_at],
       ['Source', 'rbi.org.in — Bankwise ATM/POS/Card Statistics'],
     ]},
-    { name: 'Missing Months', rows: [
-      ['Period'],
-      ...missing.map(p => [p]),
-    ]},
-    { name: 'Unmapped Banks', rows: [
-      ['Bank'],
-      ...unmapped.map(b => [b]),
-    ]},
+    { name: 'Missing Months', rows: [['Period'], ...missing.map(p => [p])] },
+    { name: 'Unmapped Banks', rows: [['Bank'], ...unmapped.map(b => [b])] },
     { name: 'Parser Errors', rows: [
       ['Log line'],
       ...(_errorsText || '').split(/\r?\n/).map(l => [l]),
