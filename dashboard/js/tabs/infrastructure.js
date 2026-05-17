@@ -243,8 +243,14 @@ function renderTrend(state, allRows, filtered) {
       markLine: mean != null ? {
         symbol: 'none', silent: true,
         lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },
-        label: { color: '#64748b', fontSize: 10, fontWeight: 500,
-                 position: 'end', formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)) },
+        label: {
+          color: '#64748b', fontSize: 10, fontWeight: 600,
+          position: 'insideStartTop', distance: 4,
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          padding: [3, 7], borderRadius: 6,
+          borderColor: '#e3e6ec', borderWidth: 1,
+          formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)),
+        },
         data: [{ yAxis: mean }],
       } : undefined,
       markPoint: { ...latestGlow, data: allMarks },
