@@ -18,6 +18,7 @@ let charts = {};
 let _root = null;
 let _unsub = null;
 let _heatmapWindow = 36;   // months
+let _heatmapMode = 'share';   // 'share' | 'delta'
 let _topN = 10;
 let _playing = null;
 let _trendValuesCache = [];
@@ -73,6 +74,10 @@ const HTML = `
           <div class="card-sub" id="mk-heat-sub">—</div>
         </div>
         <div class="card-actions">
+          <div class="mini-toggle" id="mk-heat-mode">
+            <button class="active" data-v="share">Share %</button>
+            <button data-v="delta">Δ pp (MoM)</button>
+          </div>
           <div class="mini-toggle" id="mk-window">
             <button data-v="12">12 m</button>
             <button data-v="24">24 m</button>
@@ -108,6 +113,12 @@ export function mount(root) {
     const btn = e.target.closest('button[data-v]'); if (!btn) return;
     _heatmapWindow = +btn.dataset.v;
     root.querySelectorAll('#mk-window button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
+    redraw();
+  };
+  root.querySelector('#mk-heat-mode').onclick = (e) => {
+    const btn = e.target.closest('button[data-v]'); if (!btn) return;
+    _heatmapMode = btn.dataset.v;
+    root.querySelectorAll('#mk-heat-mode button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
     redraw();
   };
 
@@ -344,10 +355,12 @@ function renderMovers(state, allRows, universe, period) {
     </div>`;
 }
 
-// ── 4. Heatmap (bank × time → share %) ─────────────────────────────────
-// Cleaner palette, value labels inside larger cells, banks sorted by latest
-// share desc (so the "leader board" reads top-down), x-axis shows only
-// quarterly tick labels.
+// ── 4. Heatmap (bank × time) ───────────────────────────────────────────
+// Two modes:
+//   share : absolute market share % — categorical piecewise bins so SBI's
+//           33% doesn't flatten the colour scale for everyone else
+//   delta : MoM share change in pp — diverging red→white→green so you can
+//           literally see who's gaining/losing each month
 function renderHeatmap(state, universe, period, topBanks) {
   const m = metric(state.metric);
   const allPeriods = [...new Set(universe.map(r => r.period))].sort();
@@ -359,8 +372,8 @@ function renderHeatmap(state, universe, period, topBanks) {
   const dN = new Map();
   for (const p of periodsWindow) dN.set(p, sumAt(universe, p, m.field));
 
-  // Compute shares per bank per period AND latest-period share for sorting
-  const shareTable = new Map();    // bank → period → share
+  // Compute absolute share table first
+  const shareTable = new Map();
   const latestShare = new Map();
   for (const bank of topBanks) {
     const br = universe.filter(r => r.bank === bank);
@@ -368,93 +381,133 @@ function renderHeatmap(state, universe, period, topBanks) {
     for (const p of periodsWindow) {
       const num = sumAt(br, p, m.field);
       const den = dN.get(p);
-      const s = den > 0 ? (num / den) * 100 : null;
-      row.set(p, s);
+      row.set(p, den > 0 ? (num / den) * 100 : null);
     }
     shareTable.set(bank, row);
     latestShare.set(bank, row.get(periodsWindow[periodsWindow.length - 1]) ?? 0);
   }
 
-  // Sort banks by latest-period share desc — leaderboard reads top-down
   const ys = [...topBanks].sort((a, b) => (latestShare.get(b) ?? 0) - (latestShare.get(a) ?? 0));
 
+  // Build data points for either mode
   const data = [];
-  let maxV = 0;
   for (let yi = 0; yi < ys.length; yi++) {
     const row = shareTable.get(ys[yi]);
+    let prev = null;
     for (let xi = 0; xi < periodsWindow.length; xi++) {
       const s = row.get(periodsWindow[xi]);
-      data.push([xi, yi, s == null ? '-' : Number(s.toFixed(2))]);
-      if (s != null && s > maxV) maxV = s;
+      let v;
+      if (_heatmapMode === 'delta') {
+        v = (s != null && prev != null) ? +(s - prev).toFixed(3) : '-';
+      } else {
+        v = s == null ? '-' : +s.toFixed(2);
+      }
+      data.push([xi, yi, v]);
+      prev = s;
     }
   }
 
-  // Decide which x-labels to show — every quarter-start (or first-of-year)
+  // Quarter-start label mask
   const labelMask = periodsWindow.map(p => {
     const mm = +p.split('-')[1];
     return mm === 1 || mm === 4 || mm === 7 || mm === 10;
   });
 
   _root.querySelector('#mk-heat-sub').textContent =
-    `Top ${ys.length} banks · last ${periodsWindow.length} months · share % within ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
+    _heatmapMode === 'delta'
+      ? `Top ${ys.length} banks · last ${periodsWindow.length} months · MoM Δ in pp · ${state.category !== 'all' ? state.category : 'industry'}`
+      : `Top ${ys.length} banks · last ${periodsWindow.length} months · share % · ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
 
-  // Label visibility — only show in cells above a per-bank threshold so the
-  // grid stays readable; threshold scales with cell width.
   const cellWide = periodsWindow.length <= 24;
-  const labelThreshold = cellWide ? 0.5 : 2.0;
+
+  // Piecewise visualMap config
+  const visualMap = _heatmapMode === 'delta' ? {
+    type: 'piecewise',
+    pieces: [
+      { lt: -0.5,            color: '#b91c1c', label: '< -0.5' },
+      { gte: -0.5, lt: -0.1, color: '#fca5a5', label: '-0.5 to -0.1' },
+      { gte: -0.1, lte: 0.1, color: '#f1f5f9', label: '-0.1 to +0.1' },
+      { gt: 0.1,   lte: 0.5, color: '#86efac', label: '+0.1 to +0.5' },
+      { gt: 0.5,             color: '#15803d', label: '> +0.5' },
+    ],
+    orient: 'horizontal', left: 'center', bottom: 4,
+    itemWidth: 16, itemHeight: 12, itemGap: 6,
+    textStyle: { color: '#64748b', fontSize: 10, fontWeight: 500 },
+    padding: 0,
+  } : {
+    type: 'piecewise',
+    pieces: [
+      { lt: 1,             color: '#eef2ff', label: '< 1%' },
+      { gte: 1,  lt: 3,    color: '#c7d2fe', label: '1-3%' },
+      { gte: 3,  lt: 6,    color: '#a5b4fc', label: '3-6%' },
+      { gte: 6,  lt: 10,   color: '#818cf8', label: '6-10%' },
+      { gte: 10, lt: 20,   color: '#4f46e5', label: '10-20%' },
+      { gte: 20,           color: '#312e81', label: '> 20%' },
+    ],
+    orient: 'horizontal', left: 'center', bottom: 4,
+    itemWidth: 16, itemHeight: 12, itemGap: 6,
+    textStyle: { color: '#64748b', fontSize: 10, fontWeight: 500 },
+    padding: 0,
+  };
 
   charts.heat.setOption({
-    grid: { left: 180, right: 30, top: 18, bottom: 56 },
+    grid: { left: 180, right: 30, top: 18, bottom: 64 },
     tooltip: { ...TOOLTIP_BASE, trigger: 'item',
       formatter: (p) => {
         const [xi, yi, v] = p.data;
+        const label = _heatmapMode === 'delta' ? 'MoM Δ' : 'Share';
+        const formatted = v === '-' || v == null ? '—'
+          : _heatmapMode === 'delta' ? ((v > 0 ? '+' : '') + v.toFixed(2) + ' pp')
+          : (v + '%');
         return `<div style="font-weight:600;margin-bottom:4px">${ys[yi]}</div>
                 <div style="color:#cbd2dc;font-size:11px;margin-bottom:6px">${periodLabel(periodsWindow[xi])}</div>
-                <div>Share: <b>${v === '-' ? '—' : v + '%'}</b></div>`;
+                <div>${label}: <b>${formatted}</b></div>`;
       },
     },
     xAxis: { type: 'category', data: periodsWindow.map(periodLabel),
       axisLine: { lineStyle: { color: '#e3e6ec' } },
       axisTick: { show: false },
       axisLabel: { color: '#64748b', fontSize: 10, fontWeight: 500,
-        interval: (idx) => labelMask[idx],
-        formatter: (v) => v },
+        interval: (idx) => labelMask[idx] },
       splitArea: { show: false } },
     yAxis: { type: 'category', data: ys,
       axisLine: { show: false }, axisTick: { show: false },
       axisLabel: { color: '#0f172a', fontSize: 11.5, fontWeight: 600,
         formatter: (v) => v.length > 24 ? v.slice(0, 23) + '…' : v },
       splitArea: { show: false } },
-    visualMap: {
-      min: 0, max: Math.max(1, Math.ceil(maxV)),
-      orient: 'horizontal', left: 'center', bottom: 4,
-      itemWidth: 220, itemHeight: 8,
-      text: ['high', 'low'],
-      textStyle: { color: '#64748b', fontSize: 10, fontWeight: 500 },
-      inRange: {
-        // White → cyan → indigo → deep indigo. Better mid-range contrast.
-        color: ['#f8fafd', '#dbeafe', '#a5b4fc', '#6366f1', '#4338ca', '#312e81'],
-      },
-      calculable: false,
-    },
+    visualMap,
     series: [{
       type: 'heatmap', data,
       itemStyle: { borderRadius: 3, borderColor: '#ffffff', borderWidth: 1 },
       label: {
         show: true,
-        color: '#0f172a', fontSize: 10, fontWeight: 600,
+        fontSize: cellWide ? 11 : 10, fontWeight: 600,
+        // Dark text on light cells, white on dark — picked per-piece via colour
+        color: (params) => {
+          const v = params.data[2];
+          if (v === '-' || v == null) return 'transparent';
+          if (_heatmapMode === 'delta') {
+            return Math.abs(v) >= 0.5 ? '#ffffff' : '#0f172a';
+          }
+          return v >= 10 ? '#ffffff' : '#0f172a';
+        },
         formatter: (p) => {
           const v = p.data[2];
           if (v === '-' || v == null) return '';
-          if (v < labelThreshold) return '';
+          if (_heatmapMode === 'delta') {
+            // skip nearly-zero so the white cells stay clean
+            if (Math.abs(v) < 0.05) return '';
+            return (v > 0 ? '+' : '') + v.toFixed(2);
+          }
+          // share %: skip very small to keep the grid readable
+          if (v < (cellWide ? 0.5 : 2)) return '';
           return v.toFixed(1);
         },
       },
       emphasis: {
-        itemStyle: { borderColor: '#0f172a', borderWidth: 1.5, shadowBlur: 10, shadowColor: 'rgba(15,23,42,0.25)' },
-        label: { color: '#ffffff' },
+        itemStyle: { borderColor: '#0f172a', borderWidth: 1.5, shadowBlur: 10, shadowColor: 'rgba(15,23,42,0.28)' },
       },
-      progressive: 1000, animation: true,
+      animation: true,
     }],
   }, true);
 }
