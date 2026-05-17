@@ -366,7 +366,14 @@ function renderHeatmap(state, universe, period, topBanks) {
   const allPeriods = [...new Set(universe.map(r => r.period))].sort();
   const endIdx = allPeriods.indexOf(period);
   if (endIdx < 0) { setEmpty(charts.heat, 'No data'); return; }
-  const startIdx = Math.max(0, endIdx - _heatmapWindow + 1);
+  // Respect both the local window AND the top-bar From: take whichever
+  // produces the SHORTER range (the more restrictive constraint wins).
+  let startIdx = Math.max(0, endIdx - _heatmapWindow + 1);
+  const s = getState();
+  if (s.from) {
+    const fromIdx = allPeriods.indexOf(s.from);
+    if (fromIdx > startIdx) startIdx = fromIdx;
+  }
   const periodsWindow = allPeriods.slice(startIdx, endIdx + 1);
 
   const dN = new Map();
@@ -424,11 +431,13 @@ function renderHeatmap(state, universe, period, topBanks) {
   const visualMap = _heatmapMode === 'delta' ? {
     type: 'piecewise',
     pieces: [
-      { lt: -0.5,            color: '#b91c1c', label: '< -0.5' },
-      { gte: -0.5, lt: -0.1, color: '#fca5a5', label: '-0.5 to -0.1' },
-      { gte: -0.1, lte: 0.1, color: '#f1f5f9', label: '-0.1 to +0.1' },
-      { gt: 0.1,   lte: 0.5, color: '#86efac', label: '+0.1 to +0.5' },
-      { gt: 0.5,             color: '#15803d', label: '> +0.5' },
+      { lt: -0.5,              color: '#991b1b', label: 'Lost > 0.5' },
+      { gte: -0.5, lt: -0.1,   color: '#ef4444', label: '-0.5 to -0.1' },
+      { gte: -0.1, lt: -0.05,  color: '#fca5a5', label: '-0.1 to -0.05' },
+      { gte: -0.05, lte: 0.05, color: '#f1f5f9', label: 'Flat (±0.05)' },
+      { gt: 0.05, lte: 0.1,    color: '#bbf7d0', label: '+0.05 to +0.1' },
+      { gt: 0.1, lte: 0.5,     color: '#22c55e', label: '+0.1 to +0.5' },
+      { gt: 0.5,               color: '#15803d', label: 'Gained > 0.5' },
     ],
     orient: 'horizontal', left: 'center', bottom: 4,
     itemWidth: 16, itemHeight: 12, itemGap: 6,
@@ -487,7 +496,8 @@ function renderHeatmap(state, universe, period, topBanks) {
           const v = params.data[2];
           if (v === '-' || v == null) return 'transparent';
           if (_heatmapMode === 'delta') {
-            return Math.abs(v) >= 0.5 ? '#ffffff' : '#0f172a';
+            // Strong colours (|v| >= 0.1) get white text; lighter cells dark
+            return Math.abs(v) > 0.1 ? '#ffffff' : '#0f172a';
           }
           return v >= 10 ? '#ffffff' : '#0f172a';
         },
