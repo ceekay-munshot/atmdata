@@ -5,8 +5,8 @@ const DEFAULTS = {
   metric: 'dc_vol',          // see METRICS in calc.js
   category: 'all',           // category label | 'all'
   banks: [],                 // multi-select; [] means "no specific bank filter"
-  from: null,                // YYYY-MM (null = first available)
-  to: null,                  // YYYY-MM (null = latest available)
+  from: '2014-01',           // default focus = Jan 2014 onwards (pre-2014 is patchy)
+  to: null,                  // null = always pin to latest available period
   // Toggles
   freq: 'M',                 // 'M' | 'Q' | 'Y'
   view: 'absolute',          // 'absolute' | 'share'

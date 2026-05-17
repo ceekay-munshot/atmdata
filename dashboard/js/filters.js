@@ -118,7 +118,7 @@ function render() {
   $('#f-reset', _container).onclick = () => {
     setState({
       metric: 'dc_vol', category: 'all', banks: [],
-      from: null, to: null,
+      from: '2014-01', to: null,
       freq: 'M', view: 'absolute', growthType: 'MoM',
     });
   };
