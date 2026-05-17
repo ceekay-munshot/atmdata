@@ -12,7 +12,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 3527150,
-      "debit_card_atm_withdrawal_value_thousands": 953419.9999999999
+      "debit_card_atm_withdrawal_value_thousands": 9534199.999999998
     },
     {
       "bank": "Andhra Bank",
@@ -21,9 +21,9 @@
       "off_site_atms": 630,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 10421,
-      "credit_card_atm_withdrawal_value_thousands": 4450.0,
+      "credit_card_atm_withdrawal_value_thousands": 44500.0,
       "debit_card_atm_withdrawal_volume": 10637410,
-      "debit_card_atm_withdrawal_value_thousands": 3006440.0
+      "debit_card_atm_withdrawal_value_thousands": 30064400.0
     },
     {
       "bank": "Bank of Baroda",
@@ -32,9 +32,9 @@
       "off_site_atms": 1708,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 1759,
-      "credit_card_atm_withdrawal_value_thousands": 530.0000000000001,
+      "credit_card_atm_withdrawal_value_thousands": 5300.000000000001,
       "debit_card_atm_withdrawal_volume": 11250311,
-      "debit_card_atm_withdrawal_value_thousands": 4612670.0
+      "debit_card_atm_withdrawal_value_thousands": 46126700.0
     },
     {
       "bank": "Bank of India",
@@ -43,9 +43,9 @@
       "off_site_atms": 1671,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 9643,
-      "credit_card_atm_withdrawal_value_thousands": 6126.000000000001,
+      "credit_card_atm_withdrawal_value_thousands": 61260.00000000001,
       "debit_card_atm_withdrawal_volume": 15377258,
-      "debit_card_atm_withdrawal_value_thousands": 3747230.0000000005
+      "debit_card_atm_withdrawal_value_thousands": 37472300.0
     },
     {
       "bank": "Bank of Maharashtra",
@@ -54,9 +54,9 @@
       "off_site_atms": 362,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 363,
-      "credit_card_atm_withdrawal_value_thousands": 130.0,
+      "credit_card_atm_withdrawal_value_thousands": 1300.0,
       "debit_card_atm_withdrawal_volume": 4041963,
-      "debit_card_atm_withdrawal_value_thousands": 1023559.9999999999
+      "debit_card_atm_withdrawal_value_thousands": 10235599.999999998
     },
     {
       "bank": "Canara Bank",
@@ -65,9 +65,9 @@
       "off_site_atms": 2126,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 10703,
-      "credit_card_atm_withdrawal_value_thousands": 5090.0,
+      "credit_card_atm_withdrawal_value_thousands": 50900.0,
       "debit_card_atm_withdrawal_volume": 14606679,
-      "debit_card_atm_withdrawal_value_thousands": 4074650.0
+      "debit_card_atm_withdrawal_value_thousands": 40746500.0
     },
     {
       "bank": "Central Bank of India",
@@ -76,9 +76,9 @@
       "off_site_atms": 1567,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 775,
-      "credit_card_atm_withdrawal_value_thousands": 320.0,
+      "credit_card_atm_withdrawal_value_thousands": 3200.0,
       "debit_card_atm_withdrawal_volume": 2011310,
-      "debit_card_atm_withdrawal_value_thousands": 948830.0000000001
+      "debit_card_atm_withdrawal_value_thousands": 9488300.000000002
     },
     {
       "bank": "Corporation Bank",
@@ -87,9 +87,9 @@
       "off_site_atms": 876,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 937,
-      "credit_card_atm_withdrawal_value_thousands": 457.7597,
+      "credit_card_atm_withdrawal_value_thousands": 4577.597,
       "debit_card_atm_withdrawal_volume": 4050224,
-      "debit_card_atm_withdrawal_value_thousands": 1460070.0
+      "debit_card_atm_withdrawal_value_thousands": 14600699.999999998
     },
     {
       "bank": "Dena Bank",
@@ -100,7 +100,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 2536096,
-      "debit_card_atm_withdrawal_value_thousands": 871583.8923
+      "debit_card_atm_withdrawal_value_thousands": 8715838.922999999
     },
     {
       "bank": "Indian Bank",
@@ -109,9 +109,9 @@
       "off_site_atms": 450,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 2880,
-      "credit_card_atm_withdrawal_value_thousands": 1050.0,
+      "credit_card_atm_withdrawal_value_thousands": 10500.0,
       "debit_card_atm_withdrawal_volume": 11677681,
-      "debit_card_atm_withdrawal_value_thousands": 2661080.0
+      "debit_card_atm_withdrawal_value_thousands": 26610800.0
     },
     {
       "bank": "Indian Overseas Bank",
@@ -120,9 +120,9 @@
       "off_site_atms": 870,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 3292,
-      "credit_card_atm_withdrawal_value_thousands": 540.0,
+      "credit_card_atm_withdrawal_value_thousands": 5400.0,
       "debit_card_atm_withdrawal_volume": 7535852,
-      "debit_card_atm_withdrawal_value_thousands": 2074950.0
+      "debit_card_atm_withdrawal_value_thousands": 20749500.0
     },
     {
       "bank": "Oriental Bank of Commerce",
@@ -133,7 +133,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 4353396,
-      "debit_card_atm_withdrawal_value_thousands": 1687149.4
+      "debit_card_atm_withdrawal_value_thousands": 16871494.0
     },
     {
       "bank": "Punjab and Sind Bank",
@@ -144,7 +144,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 313339,
-      "debit_card_atm_withdrawal_value_thousands": 127530.0
+      "debit_card_atm_withdrawal_value_thousands": 1275300.0
     },
     {
       "bank": "Punjab National Bank",
@@ -153,9 +153,9 @@
       "off_site_atms": 3380,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 2022,
-      "credit_card_atm_withdrawal_value_thousands": 883.608541,
+      "credit_card_atm_withdrawal_value_thousands": 8836.08541,
       "debit_card_atm_withdrawal_volume": 19863731,
-      "debit_card_atm_withdrawal_value_thousands": 8260123.113899999
+      "debit_card_atm_withdrawal_value_thousands": 82601231.139
     },
     {
       "bank": "Syndicate  Bank",
@@ -164,9 +164,9 @@
       "off_site_atms": 203,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 1506,
-      "credit_card_atm_withdrawal_value_thousands": 627.3242999999999,
+      "credit_card_atm_withdrawal_value_thousands": 6273.242999999999,
       "debit_card_atm_withdrawal_volume": 8020737,
-      "debit_card_atm_withdrawal_value_thousands": 2060204.8983999998
+      "debit_card_atm_withdrawal_value_thousands": 20602048.983999997
     },
     {
       "bank": "UCO Bank",
@@ -177,7 +177,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 3434505,
-      "debit_card_atm_withdrawal_value_thousands": 1278100.0
+      "debit_card_atm_withdrawal_value_thousands": 12781000.0
     },
     {
       "bank": "Union  Bank of India",
@@ -186,9 +186,9 @@
       "off_site_atms": 2927,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 1018,
-      "credit_card_atm_withdrawal_value_thousands": 466.462845,
+      "credit_card_atm_withdrawal_value_thousands": 4664.62845,
       "debit_card_atm_withdrawal_volume": 12139915,
-      "debit_card_atm_withdrawal_value_thousands": 3771872.0
+      "debit_card_atm_withdrawal_value_thousands": 37718720.0
     },
     {
       "bank": "United  Bank of India",
@@ -199,7 +199,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 2784715,
-      "debit_card_atm_withdrawal_value_thousands": 1073885.7370000002
+      "debit_card_atm_withdrawal_value_thousands": 10738857.370000001
     },
     {
       "bank": "Vijaya  Bank",
@@ -208,9 +208,9 @@
       "off_site_atms": 223,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 4657,
-      "credit_card_atm_withdrawal_value_thousands": 2490.0,
+      "credit_card_atm_withdrawal_value_thousands": 24900.000000000004,
       "debit_card_atm_withdrawal_volume": 2997421,
-      "debit_card_atm_withdrawal_value_thousands": 943830.0000000001
+      "debit_card_atm_withdrawal_value_thousands": 9438300.000000002
     },
     {
       "bank": "State Bank of India",
@@ -219,9 +219,9 @@
       "off_site_atms": 17549,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 46101,
-      "credit_card_atm_withdrawal_value_thousands": 20914.761759999998,
+      "credit_card_atm_withdrawal_value_thousands": 209147.6176,
       "debit_card_atm_withdrawal_volume": 224013823,
-      "debit_card_atm_withdrawal_value_thousands": 61348360.0
+      "debit_card_atm_withdrawal_value_thousands": 613483600.0
     },
     {
       "bank": "State Bank of Bikaner & Jaipur",
@@ -232,7 +232,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 8242119,
-      "debit_card_atm_withdrawal_value_thousands": 2336242.0
+      "debit_card_atm_withdrawal_value_thousands": 23362420.000000004
     },
     {
       "bank": "State Bank of Hyderabad",
@@ -243,7 +243,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 15171142,
-      "debit_card_atm_withdrawal_value_thousands": 3871460.0
+      "debit_card_atm_withdrawal_value_thousands": 38714600.0
     },
     {
       "bank": "State Bank of Mysore",
@@ -254,7 +254,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 6033733,
-      "debit_card_atm_withdrawal_value_thousands": 1507252.0
+      "debit_card_atm_withdrawal_value_thousands": 15072520.0
     },
     {
       "bank": "State Bank of Patiala",
@@ -265,7 +265,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 4778706,
-      "debit_card_atm_withdrawal_value_thousands": 1446573.971566
+      "debit_card_atm_withdrawal_value_thousands": 14465739.71566
     },
     {
       "bank": "State Bank of Travancore",
@@ -276,7 +276,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 8683459,
-      "debit_card_atm_withdrawal_value_thousands": 2534534.574069
+      "debit_card_atm_withdrawal_value_thousands": 25345345.740689997
     },
     {
       "bank": "IDBI Ltd.",
@@ -287,7 +287,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 7272924,
-      "debit_card_atm_withdrawal_value_thousands": 2879607.7177989995
+      "debit_card_atm_withdrawal_value_thousands": 28796077.177989997
     },
     {
       "bank": "Catholic Syrian Bank Ltd.",
@@ -298,7 +298,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 312601,
-      "debit_card_atm_withdrawal_value_thousands": 82468.77198599999
+      "debit_card_atm_withdrawal_value_thousands": 824687.71986
     },
     {
       "bank": "City Union Bank Ltd",
@@ -309,7 +309,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 1549101,
-      "debit_card_atm_withdrawal_value_thousands": 503580.0
+      "debit_card_atm_withdrawal_value_thousands": 5035800.0
     },
     {
       "bank": "Dhanalaxmi Bank Ltd.",
@@ -318,9 +318,9 @@
       "off_site_atms": 218,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 8,
-      "credit_card_atm_withdrawal_value_thousands": 4.7,
+      "credit_card_atm_withdrawal_value_thousands": 47.0,
       "debit_card_atm_withdrawal_volume": 455347,
-      "debit_card_atm_withdrawal_value_thousands": 164360.0
+      "debit_card_atm_withdrawal_value_thousands": 1643600.0000000002
     },
     {
       "bank": "Federal Bank Limited",
@@ -331,7 +331,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 3647869,
-      "debit_card_atm_withdrawal_value_thousands": 1570380.0
+      "debit_card_atm_withdrawal_value_thousands": 15703800.000000002
     },
     {
       "bank": "ING Vysya Bank",
@@ -340,9 +340,9 @@
       "off_site_atms": 361,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 5,
-      "credit_card_atm_withdrawal_value_thousands": 0.25,
+      "credit_card_atm_withdrawal_value_thousands": 2.5,
       "debit_card_atm_withdrawal_volume": 2287710,
-      "debit_card_atm_withdrawal_value_thousands": 660800.0
+      "debit_card_atm_withdrawal_value_thousands": 6608000.0
     },
     {
       "bank": "Jammu & Kashmir Bank",
@@ -351,9 +351,9 @@
       "off_site_atms": 293,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 2366,
-      "credit_card_atm_withdrawal_value_thousands": 740.0,
+      "credit_card_atm_withdrawal_value_thousands": 7400.0,
       "debit_card_atm_withdrawal_volume": 2873983,
-      "debit_card_atm_withdrawal_value_thousands": 1216730.0
+      "debit_card_atm_withdrawal_value_thousands": 12167300.0
     },
     {
       "bank": "Karnataka Bank Ltd.",
@@ -364,7 +364,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 2207714,
-      "debit_card_atm_withdrawal_value_thousands": 707060.0
+      "debit_card_atm_withdrawal_value_thousands": 7070599.999999999
     },
     {
       "bank": "Karur Vysya Bank Ltd",
@@ -375,7 +375,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 3404850,
-      "debit_card_atm_withdrawal_value_thousands": 1390120.0
+      "debit_card_atm_withdrawal_value_thousands": 13901199.999999998
     },
     {
       "bank": "Lakshmi Vilas Bank Ltd.",
@@ -386,7 +386,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 539383,
-      "debit_card_atm_withdrawal_value_thousands": 189340.0
+      "debit_card_atm_withdrawal_value_thousands": 1893400.0
     },
     {
       "bank": "Ratnakar Bank Ltd.",
@@ -395,9 +395,9 @@
       "off_site_atms": 199,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 504,
-      "credit_card_atm_withdrawal_value_thousands": 357.38375499999995,
+      "credit_card_atm_withdrawal_value_thousands": 3573.8375499999993,
       "debit_card_atm_withdrawal_volume": 172944,
-      "debit_card_atm_withdrawal_value_thousands": 50640.312999999995
+      "debit_card_atm_withdrawal_value_thousands": 506403.13
     },
     {
       "bank": "South Indian Bank Ltd",
@@ -408,7 +408,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 2109723,
-      "debit_card_atm_withdrawal_value_thousands": 713490.0
+      "debit_card_atm_withdrawal_value_thousands": 7134900.0
     },
     {
       "bank": "Tamilnadu Mercantile Bank Ltd.",
@@ -419,7 +419,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 2127575,
-      "debit_card_atm_withdrawal_value_thousands": 815370.0
+      "debit_card_atm_withdrawal_value_thousands": 8153700.0
     },
     {
       "bank": "Development Credit Bank Ltd.",
@@ -428,9 +428,9 @@
       "off_site_atms": 133,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 558,
-      "credit_card_atm_withdrawal_value_thousands": 310.0,
+      "credit_card_atm_withdrawal_value_thousands": 3100.0,
       "debit_card_atm_withdrawal_volume": 351349,
-      "debit_card_atm_withdrawal_value_thousands": 152250.0
+      "debit_card_atm_withdrawal_value_thousands": 1522500.0
     },
     {
       "bank": "HDFC  Bank Ltd.",
@@ -439,9 +439,9 @@
       "off_site_atms": 6830,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 83387,
-      "credit_card_atm_withdrawal_value_thousands": 53564.58625400001,
+      "credit_card_atm_withdrawal_value_thousands": 535645.86254,
       "debit_card_atm_withdrawal_volume": 30873218,
-      "debit_card_atm_withdrawal_value_thousands": 13448555.972967
+      "debit_card_atm_withdrawal_value_thousands": 134485559.72967
     },
     {
       "bank": "ICICI Bank Ltd.",
@@ -450,9 +450,9 @@
       "off_site_atms": 7448,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 8782,
-      "credit_card_atm_withdrawal_value_thousands": 4800.0,
+      "credit_card_atm_withdrawal_value_thousands": 48000.0,
       "debit_card_atm_withdrawal_volume": 32232448,
-      "debit_card_atm_withdrawal_value_thousands": 14356000.0
+      "debit_card_atm_withdrawal_value_thousands": 143560000.0
     },
     {
       "bank": "IndusInd Bank Ltd",
@@ -461,9 +461,9 @@
       "off_site_atms": 574,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 1366,
-      "credit_card_atm_withdrawal_value_thousands": 780.0000000000001,
+      "credit_card_atm_withdrawal_value_thousands": 7800.000000000001,
       "debit_card_atm_withdrawal_volume": 1479081,
-      "debit_card_atm_withdrawal_value_thousands": 609170.0
+      "debit_card_atm_withdrawal_value_thousands": 6091700.0
     },
     {
       "bank": "Kotak Mahindra Bank Ltd",
@@ -472,9 +472,9 @@
       "off_site_atms": 630,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 4915,
-      "credit_card_atm_withdrawal_value_thousands": 2902.415673,
+      "credit_card_atm_withdrawal_value_thousands": 29024.156730000002,
       "debit_card_atm_withdrawal_volume": 2494504,
-      "debit_card_atm_withdrawal_value_thousands": 902646.9522119984
+      "debit_card_atm_withdrawal_value_thousands": 9026469.522119984
     },
     {
       "bank": "Axis Bank Ltd.",
@@ -483,9 +483,9 @@
       "off_site_atms": 10125,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 19097,
-      "credit_card_atm_withdrawal_value_thousands": 6645.398356,
+      "credit_card_atm_withdrawal_value_thousands": 66453.98356,
       "debit_card_atm_withdrawal_volume": 26907195,
-      "debit_card_atm_withdrawal_value_thousands": 11618767.77147
+      "debit_card_atm_withdrawal_value_thousands": 116187677.7147
     },
     {
       "bank": "Yes Bank Ltd.",
@@ -496,7 +496,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 1155076,
-      "debit_card_atm_withdrawal_value_thousands": 411720.00000000006
+      "debit_card_atm_withdrawal_value_thousands": 4117200.000000001
     },
     {
       "bank": "RBS (ABN AMRO)",
@@ -507,7 +507,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 255244,
-      "debit_card_atm_withdrawal_value_thousands": 106453.148816
+      "debit_card_atm_withdrawal_value_thousands": 1064531.48816
     },
     {
       "bank": "American Express Bkg. Corp.",
@@ -516,7 +516,7 @@
       "off_site_atms": 0,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 6460,
-      "credit_card_atm_withdrawal_value_thousands": 4687.01,
+      "credit_card_atm_withdrawal_value_thousands": 46870.1,
       "debit_card_atm_withdrawal_volume": 0,
       "debit_card_atm_withdrawal_value_thousands": 0.0
     },
@@ -529,7 +529,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 716,
-      "debit_card_atm_withdrawal_value_thousands": 458.536011
+      "debit_card_atm_withdrawal_value_thousands": 4585.36011
     },
     {
       "bank": "Citibank",
@@ -538,9 +538,9 @@
       "off_site_atms": 571,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 43090,
-      "credit_card_atm_withdrawal_value_thousands": 27136.028,
+      "credit_card_atm_withdrawal_value_thousands": 271360.27999999997,
       "debit_card_atm_withdrawal_volume": 3521137,
-      "debit_card_atm_withdrawal_value_thousands": 1211546.0294
+      "debit_card_atm_withdrawal_value_thousands": 12115460.294
     },
     {
       "bank": "Deutsche Bank",
@@ -551,7 +551,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 196891,
-      "debit_card_atm_withdrawal_value_thousands": 79397.74740000001
+      "debit_card_atm_withdrawal_value_thousands": 793977.474
     },
     {
       "bank": "DBS Ltd.",
@@ -562,7 +562,7 @@
       "credit_card_atm_withdrawal_volume": 0,
       "credit_card_atm_withdrawal_value_thousands": 0.0,
       "debit_card_atm_withdrawal_volume": 73521,
-      "debit_card_atm_withdrawal_value_thousands": 19610.0
+      "debit_card_atm_withdrawal_value_thousands": 196100.0
     },
     {
       "bank": "HSBC",
@@ -571,9 +571,9 @@
       "off_site_atms": 76,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 4310,
-      "credit_card_atm_withdrawal_value_thousands": 3060.0,
+      "credit_card_atm_withdrawal_value_thousands": 30600.0,
       "debit_card_atm_withdrawal_volume": 481337,
-      "debit_card_atm_withdrawal_value_thousands": 221760.0
+      "debit_card_atm_withdrawal_value_thousands": 2217600.0
     },
     {
       "bank": "Standard Chartered Bank",
@@ -582,9 +582,9 @@
       "off_site_atms": 173,
       "micro_atms": null,
       "credit_card_atm_withdrawal_volume": 3219,
-      "credit_card_atm_withdrawal_value_thousands": 1380.0,
+      "credit_card_atm_withdrawal_value_thousands": 13799.999999999998,
       "debit_card_atm_withdrawal_volume": 1321638,
-      "debit_card_atm_withdrawal_value_thousands": 467920.0
+      "debit_card_atm_withdrawal_value_thousands": 4679200.0
     }
   ]
 }

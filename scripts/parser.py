@@ -135,6 +135,28 @@ def _find_category(text: str) -> str | None:
     return None
 
 
+def _detect_value_unit(df: pd.DataFrame) -> str:
+    """Inspect the header text for the unit the value columns are in.
+    Returns 'lakh' / 'millions' / 'thousands'. Defaults to 'millions' if
+    no hint is found (covers the very oldest legacy files).
+    """
+    head_text = " ".join(
+        str(v) for v in df.head(12).values.flatten() if isinstance(v, str)
+    ).lower()
+    # Order matters — check the most specific first
+    if "rs'000" in head_text or "rupees '000" in head_text or "rs 000" in head_text:
+        return "thousands"
+    if "lakh" in head_text:
+        return "lakh"
+    if "million" in head_text:
+        return "millions"
+    return "millions"
+
+
+# Multiplier to convert a value in <unit> into Rs '000.
+UNIT_TO_THOUSANDS = {"lakh": 100, "millions": 1000, "thousands": 1}
+
+
 def _detect_format(df: pd.DataFrame) -> str:
     """Return one of:
       'modern'        - 2023+, Bank Name col 2, Micro ATMs present, values in Rs '000
@@ -232,14 +254,15 @@ def parse_modern(df: pd.DataFrame) -> list[dict]:
 
 
 def parse_legacy(df: pd.DataFrame) -> list[dict]:
-    """Parse 2017 format: no Micro ATMs, values in Rs Millions -> convert to Rs '000."""
-    # Legacy layout (confirmed from Jan 2017):
-    # col 2 = Bank Name, 3 = On-site, 4 = Off-site (no Micro ATMs)
-    # col 8 = CC ATM Vol, 10 = CC ATM Val (Rs Millions)
-    # col 13 = DC ATM Vol, 15 = DC ATM Val (Rs Millions)
+    """Parse 2017-2019 format: no Micro ATMs, Bank Name in col 2.
+    Value unit is auto-detected from the file header — RBI switched mid-2019
+    from "Rs Millions" to "Rs Lakh" without changing the layout."""
     BANK, ONSITE, OFFSITE = 2, 3, 4
-    CC_VOL, CC_VAL_MILLIONS = 8, 10
-    DC_VOL, DC_VAL_MILLIONS = 13, 15
+    CC_VOL, CC_VAL = 8, 10
+    DC_VOL, DC_VAL = 13, 15
+
+    unit = _detect_value_unit(df)
+    factor = UNIT_TO_THOUSANDS[unit]
 
     start = _find_data_start(df, BANK)
     rows: list[dict] = []
@@ -256,8 +279,8 @@ def parse_legacy(df: pd.DataFrame) -> list[dict]:
         if not _is_numeric(df.iat[i, ONSITE]) and not _is_numeric(df.iat[i, OFFSITE]):
             continue
 
-        cc_val_m = _to_float(df.iat[i, CC_VAL_MILLIONS])
-        dc_val_m = _to_float(df.iat[i, DC_VAL_MILLIONS])
+        cc_v = _to_float(df.iat[i, CC_VAL])
+        dc_v = _to_float(df.iat[i, DC_VAL])
 
         rows.append({
             "bank": bank,
@@ -266,9 +289,9 @@ def parse_legacy(df: pd.DataFrame) -> list[dict]:
             "off_site_atms": _to_int(df.iat[i, OFFSITE]),
             "micro_atms": None,
             "credit_card_atm_withdrawal_volume": _to_int(df.iat[i, CC_VOL]),
-            "credit_card_atm_withdrawal_value_thousands": cc_val_m * 1000 if cc_val_m is not None else None,
+            "credit_card_atm_withdrawal_value_thousands": cc_v * factor if cc_v is not None else None,
             "debit_card_atm_withdrawal_volume": _to_int(df.iat[i, DC_VOL]),
-            "debit_card_atm_withdrawal_value_thousands": dc_val_m * 1000 if dc_val_m is not None else None,
+            "debit_card_atm_withdrawal_value_thousands": dc_v * factor if dc_v is not None else None,
         })
     return rows
 
@@ -284,8 +307,9 @@ def parse_transition(df: pd.DataFrame) -> list[dict]:
     # col 14 = DC Transactions @ ATM (volume)
     # col 16 = DC Value of transactions @ ATM (Rs Lakh)
     BANK, ONSITE, OFFSITE, MICRO = 1, 2, 3, 6
-    CC_VOL, CC_VAL_LAKH = 9, 11
-    DC_VOL, DC_VAL_LAKH = 14, 16
+    CC_VOL, CC_VAL = 9, 11
+    DC_VOL, DC_VAL = 14, 16
+    factor = UNIT_TO_THOUSANDS[_detect_value_unit(df)]
 
     rows: list[dict] = []
     current_category: str | None = None
@@ -316,8 +340,8 @@ def parse_transition(df: pd.DataFrame) -> list[dict]:
         if not _is_numeric(df.iat[i, ONSITE]) and not _is_numeric(df.iat[i, OFFSITE]):
             continue
 
-        cc_val = _to_float(df.iat[i, CC_VAL_LAKH])
-        dc_val = _to_float(df.iat[i, DC_VAL_LAKH])
+        cc_v = _to_float(df.iat[i, CC_VAL])
+        dc_v = _to_float(df.iat[i, DC_VAL])
 
         rows.append({
             "bank": bank,
@@ -326,18 +350,19 @@ def parse_transition(df: pd.DataFrame) -> list[dict]:
             "off_site_atms": _to_int(df.iat[i, OFFSITE]),
             "micro_atms": _to_int(df.iat[i, MICRO]),
             "credit_card_atm_withdrawal_volume": _to_int(df.iat[i, CC_VOL]),
-            "credit_card_atm_withdrawal_value_thousands": cc_val * 100 if cc_val is not None else None,
+            "credit_card_atm_withdrawal_value_thousands": cc_v * factor if cc_v is not None else None,
             "debit_card_atm_withdrawal_volume": _to_int(df.iat[i, DC_VOL]),
-            "debit_card_atm_withdrawal_value_thousands": dc_val * 100 if dc_val is not None else None,
+            "debit_card_atm_withdrawal_value_thousands": dc_v * factor if dc_v is not None else None,
         })
     return rows
 
 
 def parse_legacy_narrow(df: pd.DataFrame) -> list[dict]:
-    """March-April 2020 layout: no Micro ATMs, Bank Name col 1, values in Lakh."""
+    """March-April 2020 layout: no Micro ATMs, Bank Name col 1. Unit auto-detected."""
     BANK, ONSITE, OFFSITE = 1, 2, 3
-    CC_VOL, CC_VAL_LAKH = 7, 9
-    DC_VOL, DC_VAL_LAKH = 12, 14
+    CC_VOL, CC_VAL = 7, 9
+    DC_VOL, DC_VAL = 12, 14
+    factor = UNIT_TO_THOUSANDS[_detect_value_unit(df)]
 
     rows: list[dict] = []
     current_category: str | None = None
@@ -366,8 +391,8 @@ def parse_legacy_narrow(df: pd.DataFrame) -> list[dict]:
         if not _is_numeric(df.iat[i, ONSITE]) and not _is_numeric(df.iat[i, OFFSITE]):
             continue
 
-        cc_val = _to_float(df.iat[i, CC_VAL_LAKH])
-        dc_val = _to_float(df.iat[i, DC_VAL_LAKH])
+        cc_v = _to_float(df.iat[i, CC_VAL])
+        dc_v = _to_float(df.iat[i, DC_VAL])
 
         rows.append({
             "bank": bank,
@@ -376,9 +401,9 @@ def parse_legacy_narrow(df: pd.DataFrame) -> list[dict]:
             "off_site_atms": _to_int(df.iat[i, OFFSITE]),
             "micro_atms": None,
             "credit_card_atm_withdrawal_volume": _to_int(df.iat[i, CC_VOL]),
-            "credit_card_atm_withdrawal_value_thousands": cc_val * 100 if cc_val is not None else None,
+            "credit_card_atm_withdrawal_value_thousands": cc_v * factor if cc_v is not None else None,
             "debit_card_atm_withdrawal_volume": _to_int(df.iat[i, DC_VOL]),
-            "debit_card_atm_withdrawal_value_thousands": dc_val * 100 if dc_val is not None else None,
+            "debit_card_atm_withdrawal_value_thousands": dc_v * factor if dc_v is not None else None,
         })
     return rows
 
