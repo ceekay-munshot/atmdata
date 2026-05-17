@@ -358,10 +358,30 @@ def parse_transition(df: pd.DataFrame) -> list[dict]:
 
 
 def parse_legacy_narrow(df: pd.DataFrame) -> list[dict]:
-    """March-April 2020 layout: no Micro ATMs, Bank Name col 1. Unit auto-detected."""
-    BANK, ONSITE, OFFSITE = 1, 2, 3
-    CC_VOL, CC_VAL = 7, 9
-    DC_VOL, DC_VAL = 12, 14
+    """No Micro ATMs, Bank Name col 1. Unit auto-detected.
+
+    Some 2013 files (e.g. ATMC23102013F.xls for Aug 2013) carry a
+    four-ATM-column layout: ATMs On-Line / Off-line / On-site / Off-site
+    instead of just On-site / Off-site. That shifts every data column by
+    +2, so detect it from the header text and pick the right offsets.
+    """
+    BANK = 1
+    header_cols23 = []
+    for r in range(min(6, len(df))):
+        for c in (2, 3):
+            v = df.iat[r, c] if c < df.shape[1] else None
+            if isinstance(v, str):
+                header_cols23.append(v.strip().lower())
+    has_four_atm = any("on-line" in s or "on line" in s for s in header_cols23)
+
+    if has_four_atm:
+        ONSITE, OFFSITE = 4, 5
+        CC_VOL, CC_VAL  = 9, 11
+        DC_VOL, DC_VAL  = 14, 16
+    else:
+        ONSITE, OFFSITE = 2, 3
+        CC_VOL, CC_VAL  = 7, 9
+        DC_VOL, DC_VAL  = 12, 14
     factor = UNIT_TO_THOUSANDS[_detect_value_unit(df)]
 
     rows: list[dict] = []
