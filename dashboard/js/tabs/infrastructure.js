@@ -193,6 +193,12 @@ function renderTrend(state, allRows, filtered) {
     setEmptyChart(charts.trend, 'No data', bankNote);
     return;
   }
+  // All zero (vs all null) — bank exists but reports nothing for this metric.
+  // E.g. Aditya Birla Idea Payments Bank reporting 0 on-site ATMs.
+  if (valid.every(v => v === 0)) {
+    setEmptyChart(charts.trend, 'No reported activity', zeroExplanation(filtered, state, m));
+    return;
+  }
 
   // Annotations / spike markers — only in absolute view (share view % is
   // hard to interpret without context)
@@ -490,6 +496,32 @@ function shortCat(c) {
   return c.replace(' Sector', '').replace(' Bank', '').replace('Small Finance', 'SFB');
 }
 function freqLabel(f) { return f === 'M' ? 'Monthly' : f === 'Q' ? 'Quarterly' : 'Yearly'; }
+
+// Context-aware "why all zero" message. Looks at the bank's category in the
+// filtered rows + the metric to pick the right explanation.
+function zeroExplanation(filteredRowsArr, state, m) {
+  const bank = state.banks && state.banks.length === 1 ? state.banks[0] : null;
+  const sample = filteredRowsArr.find(r => r.category);
+  const category = sample ? sample.category : null;
+  const metricLbl = m.short.toLowerCase();
+  const isAtmStock = ['on_site', 'off_site'].includes(state.metric);
+  const isMicro    = state.metric === 'micro';
+  const isCard     = state.metric.startsWith('dc_') || state.metric.startsWith('cc_');
+  const isCredit   = state.metric.startsWith('cc_');
+
+  let reason = 'RBI source data matches — this metric was reported as zero throughout.';
+  if (category === 'Payment Bank' && isAtmStock) {
+    reason = "Payments Banks operate as digital-first and typically don't run physical ATM infrastructure.";
+  } else if (category === 'Payment Bank' && isCredit) {
+    reason = 'Payments Banks are not authorised by RBI to issue credit cards.';
+  } else if (isMicro && state.from && state.from < '2020-06') {
+    reason = 'Micro ATMs only began appearing in RBI’s monthly statistics from mid-2020. Earlier rows are typically zero.';
+  } else if (category === 'Foreign Bank' && isAtmStock) {
+    reason = 'Some Foreign Banks have minimal retail/ATM presence in India and report zero ATMs.';
+  }
+  const who = bank ? bank : 'This selection';
+  return `${who} reported 0 ${metricLbl} throughout the selected range. ${reason}`;
+}
 
 // ── Export ──────────────────────────────────────────────────────────────
 function onExport(which) {
