@@ -434,7 +434,7 @@ function renderShare(state, allRows, filtered) {
   }
 
   charts.share.setOption({
-    grid: { left: 60, right: 16, top: 40, bottom: 44 },
+    grid: { left: 60, right: 72, top: 40, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 }, icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
     tooltip: { ...TOOLTIP_BASE,
       formatter: (params) => {

@@ -20,6 +20,7 @@ let _unsub = null;
 let _heatmapWindow = 36;   // months
 let _heatmapMode = 'share';   // 'share' | 'delta'
 let _topN = 10;
+let _basePeriod = null;       // null = auto (YoY); otherwise YYYY-MM
 let _playing = null;
 let _trendValuesCache = [];
 let _trendColorsCache = [];
@@ -48,10 +49,14 @@ const HTML = `
       <div class="card">
         <div class="card-head">
           <div class="card-head-text">
-            <div class="card-title">Share Change (pp, YoY)</div>
+            <div class="card-title">Share Change (pp)</div>
             <div class="card-sub" id="mk-chg-sub">—</div>
           </div>
-          <div class="card-actions"><button class="btn" data-export="change">Export</button></div>
+          <div class="card-actions">
+            <label class="mk-base-lbl">Base:</label>
+            <input type="month" id="mk-base" class="fb-input mk-base-input" />
+            <button class="btn" data-export="change">Export</button>
+          </div>
         </div>
         <div class="chart" id="chart-mk-change"></div>
       </div>
@@ -121,6 +126,12 @@ export function mount(root) {
     root.querySelectorAll('#mk-heat-mode button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
     redraw();
   };
+  // Base period picker (Share Change + Top Gainers/Losers use the same base)
+  const baseInput = root.querySelector('#mk-base');
+  baseInput.addEventListener('change', () => {
+    _basePeriod = baseInput.value || null;
+    redraw();
+  });
 
   redraw();
   _unsub = subscribe(() => { stopPlayTrend(); redraw(); });
@@ -163,6 +174,9 @@ function redraw() {
   _root.querySelector('#mk-sub').textContent =
     `${metric(state.metric).label} · share within ${state.category !== 'all' ? state.category : 'industry'}`;
 
+  // Sync base-period picker bounds + value
+  syncBaseInput(allRows, period);
+
   // Determine top-N banks by latest period
   const ranked = rankBanks(universe, state.metric, period).slice(0, _topN);
   const topBanks = ranked.map(r => r.bank);
@@ -171,6 +185,30 @@ function redraw() {
   renderChange(state, allRows, universe, period, topBanks);
   renderMovers(state, allRows, universe, period);
   renderHeatmap(state, universe, period, topBanks);
+}
+
+function syncBaseInput(allRows, period) {
+  const input = _root.querySelector('#mk-base');
+  if (!input) return;
+  const allPeriods = [...new Set(allRows.map(r => r.period))].sort();
+  input.min = allPeriods[0];
+  input.max = period;
+  // If user hasn't set a base, default to YoY of current period
+  if (!_basePeriod) {
+    input.value = yoyOf(period);
+  } else {
+    input.value = _basePeriod;
+  }
+}
+
+function yoyOf(period) {
+  const [y, m] = period.split('-').map(Number);
+  const d = new Date(Date.UTC(y - 1, m - 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function effectiveBase(period) {
+  return _basePeriod || yoyOf(period);
 }
 
 // ── 1. Market Share Trend (top N) ───────────────────────────────────────
@@ -230,15 +268,17 @@ function renderTrend(state, allRows, universe, topBanks) {
   }, true);
 }
 
-// ── 2. Share Change (pp, YoY) — single bar per bank ────────────────────
+// ── 2. Share Change (pp) — single bar per bank, custom base period ────
 function renderChange(state, allRows, universe, period, topBanks) {
   const m = metric(state.metric);
-  const refPeriod = referencePeriod(period, 'YoY', state.freq);
+  const refPeriod = effectiveBase(period);
   const denom = denominatorRows(allRows, state);
 
-  if (!refPeriod) {
-    setEmpty(charts.change, 'Not enough history for YoY share change.');
-    _root.querySelector('#mk-chg-sub').textContent = 'YoY reference unavailable';
+  // Validate that refPeriod actually exists in the data
+  const allPeriodsSet = new Set(allRows.map(r => r.period));
+  if (!refPeriod || !allPeriodsSet.has(refPeriod)) {
+    setEmpty(charts.change, 'Pick a valid base period.');
+    _root.querySelector('#mk-chg-sub').textContent = `Base ${refPeriod || '—'} not in dataset`;
     return;
   }
 
@@ -302,10 +342,11 @@ function renderChange(state, allRows, universe, period, topBanks) {
 // ── 3. Top Gainers / Losers (split table) ──────────────────────────────
 function renderMovers(state, allRows, universe, period) {
   const m = metric(state.metric);
-  const refPeriod = referencePeriod(period, 'YoY', state.freq);
-  if (!refPeriod) {
-    _root.querySelector('#mk-mov-sub').textContent = 'YoY reference unavailable';
-    _root.querySelector('#mk-movers').innerHTML = '<div class="empty"><div class="empty-title">No data</div><div class="empty-sub">Not enough history for YoY comparison.</div></div>';
+  const refPeriod = effectiveBase(period);
+  const allPeriodsSet = new Set(allRows.map(r => r.period));
+  if (!refPeriod || !allPeriodsSet.has(refPeriod)) {
+    _root.querySelector('#mk-mov-sub').textContent = `Base ${refPeriod || '—'} not in dataset`;
+    _root.querySelector('#mk-movers').innerHTML = '<div class="empty"><div class="empty-title">No data</div><div class="empty-sub">Pick a valid base period.</div></div>';
     return;
   }
   const denom = denominatorRows(allRows, state);
@@ -542,8 +583,9 @@ function onExport(which) {
   const topBanks = rankBanks(universe, state.metric, period).slice(0, _topN).map(r => r.bank);
 
   if (which === 'change' || which === 'all') {
-    const refPeriod = referencePeriod(period, 'YoY', state.freq);
-    if (refPeriod) {
+    const refPeriod = effectiveBase(period);
+    const allPeriodsSet = new Set(allRows.map(r => r.period));
+    if (refPeriod && allPeriodsSet.has(refPeriod)) {
       const denom = denominatorRows(allRows, state);
       const dNow = sumAt(denom, period, m.field);
       const dRef = sumAt(denom, refPeriod, m.field);

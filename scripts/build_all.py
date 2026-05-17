@@ -23,6 +23,7 @@ OUT_DIR = DATA_DIR / "processed"
 ERR_LOG = DATA_DIR / "_errors.log"
 MANIFEST = DATA_DIR / "manifest.json"
 FLAT = DATA_DIR / "flat.json"
+OVERRIDES = DATA_DIR / "overrides.json"
 
 
 def main() -> None:
@@ -85,6 +86,35 @@ _PERIOD_RE = re.compile(r"^\d{4}-\d{2}$")
 
 def _write_dashboard_artifacts() -> None:
     """Emit manifest.json + flat.json that the web dashboard consumes."""
+    # Manual category overrides — only filled in for banks the source files
+    # didn't tag. Never overwrites an existing category. Lookup is
+    # case/punctuation insensitive ("Axis Bank Ltd." == "AXIS BANK LTD").
+    SUFFIX_TOKENS = {"ltd", "limited", "plc", "inc", "corp", "corporation", "company"}
+
+    def _norm(s: str) -> str:
+        if not s:
+            return ""
+        # Tokenise, replace & with "and", drop trailing punctuation, then
+        # filter out generic corporate-suffix tokens so "Federal Bank Ltd",
+        # "FEDERAL BANK LTD" and "Federal Bank Limited" all collapse to the
+        # same key.
+        out: list[str] = []
+        for tok in s.lower().replace("&", " and ").replace(".", " ").replace(",", " ").split():
+            clean = "".join(c for c in tok if c.isalnum())
+            if not clean or clean in SUFFIX_TOKENS:
+                continue
+            out.append(clean)
+        return "".join(out)
+
+    cat_overrides: dict[str, str] = {}
+    if OVERRIDES.exists():
+        try:
+            ov = json.loads(OVERRIDES.read_text())
+            for name, cat in (ov.get("categories") or {}).items():
+                cat_overrides[_norm(name)] = cat
+        except Exception as e:
+            print(f"WARN: could not load {OVERRIDES.name}: {e}")
+
     period_files: list[tuple[str, Path]] = []
     for p in sorted(OUT_DIR.iterdir()):
         if p.suffix != ".json":
@@ -96,6 +126,7 @@ def _write_dashboard_artifacts() -> None:
     flat: list[dict] = []
     banks: set[str] = set()
     categories: set[str] = set()
+    override_hits = 0
     for period, path in period_files:
         try:
             data = json.loads(path.read_text())
@@ -107,6 +138,11 @@ def _write_dashboard_artifacts() -> None:
                 continue
             banks.add(bank)
             cat = b.get("category")
+            if not cat:
+                fallback = cat_overrides.get(_norm(bank))
+                if fallback:
+                    cat = fallback
+                    override_hits += 1
             if cat:
                 categories.add(cat)
             flat.append({
@@ -135,7 +171,7 @@ def _write_dashboard_artifacts() -> None:
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2))
     FLAT.write_text(json.dumps(flat, separators=(",", ":")))
-    print(f"Wrote manifest ({len(periods)} periods) and flat.json ({len(flat)} rows)")
+    print(f"Wrote manifest ({len(periods)} periods) and flat.json ({len(flat)} rows; {override_hits} category overrides applied)")
 
 
 if __name__ == "__main__":

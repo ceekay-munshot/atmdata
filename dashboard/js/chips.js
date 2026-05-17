@@ -32,6 +32,15 @@ export const CHIPS = [
     }),
   },
   {
+    label: 'HDFC vs ICICI vs Axis (private leaders)', icon: '⚖',
+    tabLabel: 'Bank Comparison',
+    apply: () => ({
+      tab: 'compare',
+      state: { metric: 'dc_vol', category: 'all',
+        banks: pickBanks(['HDFC BANK LTD', 'ICICI BANK LTD', 'AXIS BANK LTD']) },
+    }),
+  },
+  {
     label: 'Micro ATM share losers', icon: '↘',
     tabLabel: 'Market Share',
     apply: () => ({ tab: 'market', state: { metric: 'micro', growthType: 'ShareChange', category: 'all' } }),
@@ -42,9 +51,29 @@ export const CHIPS = [
     apply: () => ({ tab: 'overview', state: { metric: 'dc_vol', view: 'absolute', category: 'all' } }),
   },
   {
+    label: 'Credit card spend leaders', icon: '★',
+    tabLabel: 'Overview',
+    apply: () => ({ tab: 'overview', state: { metric: 'cc_val_cr', view: 'absolute', category: 'all' } }),
+  },
+  {
     label: 'Top 5 Private bank ATM footprint', icon: '◆',
     tabLabel: 'Market Share',
     apply: () => ({ tab: 'market', state: { metric: 'on_site', category: 'Private Sector' } }),
+  },
+  {
+    label: 'Foreign banks — debit volume share', icon: '⊕',
+    tabLabel: 'Market Share',
+    apply: () => ({ tab: 'market', state: { metric: 'dc_vol', category: 'Foreign Bank' } }),
+  },
+  {
+    label: 'Payment Banks — Micro ATM rollout', icon: '◈',
+    tabLabel: 'Overview',
+    apply: () => ({ tab: 'overview', state: { metric: 'micro', category: 'Payment Bank' } }),
+  },
+  {
+    label: 'Small Finance Banks — debit growth YoY', icon: '◇',
+    tabLabel: 'Overview',
+    apply: () => ({ tab: 'overview', state: { metric: 'dc_vol', growthType: 'YoY', category: 'Small Finance Bank' } }),
   },
 ];
 
