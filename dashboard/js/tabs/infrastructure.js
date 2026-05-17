@@ -190,7 +190,7 @@ function renderTrend(state, allRows, filtered) {
   const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
 
   charts.trend.setOption({
-    grid: { left: 70, right: 28, top: 24, bottom: 70 },
+    grid: { left: 70, right: 28, top: 24, bottom: 36 },
     tooltip: { ...TOOLTIP_BASE,
       formatter: (params) => `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>
         <div style="display:flex;align-items:center;gap:6px">
@@ -200,15 +200,6 @@ function renderTrend(state, allRows, filtered) {
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
-    dataZoom: [
-      { type: 'inside', start: 0, end: 100 },
-      { type: 'slider', start: 0, end: 100, height: 18, bottom: 8,
-        borderColor: 'transparent', backgroundColor: 'rgba(238, 242, 255, 0.5)',
-        fillerColor: 'rgba(79, 70, 229, 0.15)',
-        handleStyle: { color: '#4f46e5', borderColor: '#4f46e5' },
-        moveHandleStyle: { color: '#4f46e5' },
-        textStyle: { color: '#64748b', fontSize: 10 } },
-    ],
     series: [{
       type: 'line', smooth: true, showSymbol: false,
       lineStyle: { color, width: 2.6 },
