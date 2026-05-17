@@ -168,8 +168,9 @@ function togglePlayTrend() {
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
   btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  const fmt = _trendIndexed ? (v) => v.toFixed(1) : (v) => v.toFixed(1) + '%';
   _playing = playReplay(charts.trend, {
-    seriesData: _trendValuesCache, colors: _trendColorsCache, durationMs: 2500,
+    seriesData: _trendValuesCache, colors: _trendColorsCache, durationMs: 2500, formatVal: fmt,
     onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
   });
 }

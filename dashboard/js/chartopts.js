@@ -124,7 +124,11 @@ export const STOP_ICON =
   `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
 
 export function playReplay(chart, opts) {
-  const { seriesData, colors = ['#4f46e5'], durationMs = 2400, onProgress, onDone } = opts;
+  const {
+    seriesData, colors = ['#4f46e5'], durationMs = 2400,
+    formatVal,         // optional: (v) => string — shown as a ticker label
+    onProgress, onDone,
+  } = opts;
   const N = Array.isArray(seriesData[0]) ? seriesData[0].length : 0;
   if (N < 2) { onDone && onDone(); return { stop: () => {} }; }
   const stepMs = Math.max(10, Math.floor(durationMs / N));
@@ -136,13 +140,28 @@ export function playReplay(chart, opts) {
     const newSeries = seriesData.map((vals, sIdx) => {
       const lastVal = vals[i - 1];
       const c = colors[sIdx % colors.length];
+      const labelText = (formatVal && lastVal != null) ? formatVal(lastVal) : null;
       return {
         data: vals.slice(0, i).concat(new Array(N - i).fill(null)),
         markPoint: (i < N && lastVal != null) ? {
           symbol: 'circle', symbolSize: 14,
           itemStyle: { color: '#fff', borderColor: c, borderWidth: 2.5,
             shadowColor: hexA(c, 0.55), shadowBlur: 16 },
-          data: [{ coord: [i - 1, lastVal], label: { show: false } }],
+          data: [{
+            coord: [i - 1, lastVal],
+            label: labelText ? {
+              show: true, position: 'right', distance: 12,
+              color: c, fontWeight: 700, fontSize: 11,
+              fontFamily: 'Inter, sans-serif',
+              backgroundColor: '#ffffff',
+              padding: [4, 8],
+              borderRadius: 8,
+              borderColor: c, borderWidth: 1.5,
+              shadowColor: hexA(c, 0.25),
+              shadowBlur: 8,
+              formatter: labelText,
+            } : { show: false },
+          }],
         } : { data: [] },
       };
     });

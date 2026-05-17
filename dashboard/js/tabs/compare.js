@@ -162,8 +162,14 @@ function togglePlay(key) {
   const btn = _root.querySelector(sel);
   btn.classList.add('playing');
   btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  // Pick the right value formatter for the live label that follows each line tip
+  const m = metric(getState().metric);
+  let fmt;
+  if (key === 'share') fmt = (v) => v.toFixed(1) + '%';
+  else if (_indexedTrend) fmt = (v) => v.toFixed(1);
+  else fmt = m.format;
   _playing[key] = playReplay(chart, {
-    seriesData: cache.values, colors: cache.colors, durationMs: 2500,
+    seriesData: cache.values, colors: cache.colors, durationMs: 2500, formatVal: fmt,
     onDone: () => { _playing[key] = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
   });
 }

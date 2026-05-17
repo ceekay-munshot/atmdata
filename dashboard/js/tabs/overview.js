@@ -140,6 +140,7 @@ function stopPlayTrend() {
 function togglePlayTrend() {
   if (_playing) { stopPlayTrend(); redraw(); return; }
   const state = getState();
+  const m = metric(state.metric);
   const allRows = rows();
   const filtered = filterRows(allRows, state);
   let data = series(filtered, state.metric, state.freq);
@@ -149,8 +150,9 @@ function togglePlayTrend() {
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
   btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  const fmt = (state.view === 'share' || state.view === 'composition') ? (v) => v.toFixed(1) + '%' : m.format;
   _playing = playReplay(charts.trend, {
-    seriesData: [values], colors: [color], durationMs: 2500,
+    seriesData: [values], colors: [color], durationMs: 2500, formatVal: fmt,
     onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
   });
 }
