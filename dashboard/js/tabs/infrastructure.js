@@ -14,6 +14,7 @@ import {
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart } from '../chartopts.js';
+import { findChartAnnotations } from '../annotations.js';
 
 let charts = {};
 let _root = null;
@@ -193,13 +194,35 @@ function renderTrend(state, allRows, filtered) {
     return;
   }
 
+  // Annotations / spike markers — only in absolute view (share view % is
+  // hard to interpret without context)
+  const annotMarks = (!isShare) ? findChartAnnotations(data, {
+    bank: state.banks && state.banks.length === 1 ? state.banks[0] : null,
+    metric: state.metric === 'on_site' ? 'on_site_atms'
+          : state.metric === 'off_site' ? 'off_site_atms'
+          : state.metric === 'micro' ? 'micro_atms' : state.metric,
+    isStock: m.isStock,
+    formatVal: m.format,
+  }) : [];
+
+  const latestGlow = latestGlowMarkPoint(xs, ys, color);
+  const allMarks = [...(latestGlow.data || []), ...annotMarks];
+
   charts.trend.setOption({
     grid: { left: 70, right: 28, top: 24, bottom: 36 },
     tooltip: { ...TOOLTIP_BASE,
-      formatter: (params) => `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block"></span>
-          ${m.short} (As on): <b>${valFmt(params[0].value)}</b></div>`,
+      formatter: (params) => {
+        // markPoint hover → show annotation
+        if (params.componentType === 'markPoint' && params.data && params.data._annotation) {
+          return `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`;
+        }
+        // line series hover → standard tooltip
+        const p = Array.isArray(params) ? params[0] : params;
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block"></span>
+                  ${m.short} (As on): <b>${valFmt(p.value)}</b></div>`;
+      },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
@@ -215,7 +238,7 @@ function renderTrend(state, allRows, filtered) {
                  position: 'end', formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)) },
         data: [{ yAxis: mean }],
       } : undefined,
-      markPoint: latestGlowMarkPoint(xs, ys, color),
+      markPoint: { ...latestGlow, data: allMarks },
       data: ys,
     }],
     animation: true, animationDuration: 600,

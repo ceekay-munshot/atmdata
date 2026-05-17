@@ -1,6 +1,7 @@
 // App entry — boots data, mounts filter bar, routes tabs.
 
 import { load, manifest } from './data.js';
+import { load as loadAnnotations } from './annotations.js';
 import { mount as mountFilters } from './filters.js';
 import * as overview from './tabs/overview.js';
 import * as infrastructure from './tabs/infrastructure.js';
@@ -22,6 +23,7 @@ let currentTab = null;
 async function boot() {
   try {
     await load();
+    await loadAnnotations();
   } catch (e) {
     console.error('Data load failed:', e);
     document.querySelector('#loading-veil').innerHTML =

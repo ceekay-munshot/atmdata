@@ -1,0 +1,38 @@
+{
+  "_comment": "Curated explanations for notable changes in RBI's published data. Each entry matches on (bank, period, metric). If bank is omitted, applies to any bank; if metric is '*', applies to any metric. Charts overlay an amber marker at matching points with this text on hover.",
+  "annotations": [
+    {
+      "bank": "AU SMALL FINANCE BANK LTD",
+      "period": "2018-10",
+      "metric": "off_site_atms",
+      "title": "Off-site reclassification (Oct 2018)",
+      "detail": "AU SFB began reporting ~130 ATMs as off-site (had been 2 in Sep 2018). On-site stayed flat — looks like a one-time reclassification at source. RBI's published file matches this value."
+    },
+    {
+      "bank": "AU SMALL FINANCE BANK LTD",
+      "period": "2019-12",
+      "metric": "off_site_atms",
+      "title": "Off-site reclassification (Dec 2019)",
+      "detail": "AU SFB's off-site dropped from 265 → 3. On-site only rose by 4 — about 260 ATMs disappeared from the count. RBI's published file matches this; treat as a source-side reclassification."
+    },
+    {
+      "bank": "SBM BANK INDIA LTD",
+      "period": "2023-09",
+      "metric": "micro_atms",
+      "title": "Micro ATM portfolio reduction",
+      "detail": "SBM India's Micro ATM count fell from 61,881 to 4,305 in Sep 2023. Likely a portfolio divestment; RBI source data matches."
+    },
+    {
+      "period": "2020-04",
+      "metric": "*",
+      "title": "COVID-19 lockdown (Apr 2020)",
+      "detail": "India's national lockdown began Mar 25, 2020 and continued through April. ATM cash-withdrawal volumes and values dropped sharply across all banks. Real economic event."
+    },
+    {
+      "period": "2016-12",
+      "metric": "*",
+      "title": "Demonetisation aftermath (Dec 2016)",
+      "detail": "₹500 and ₹1000 notes were demonetised on Nov 8, 2016. Withdrawal patterns swung dramatically as new currency was distributed; expect outsized moves Nov-2016 through Feb-2017."
+    }
+  ]
+}
