@@ -30,8 +30,9 @@ const FREQ_OPTIONS = [
 ];
 
 const VIEW_OPTIONS = [
-  ['absolute', 'Absolute',     'Raw values (counts / Rs Cr)'],
-  ['share',    'Market Share', 'Each bank as % of selected denominator (industry or category total)'],
+  ['absolute',    'Absolute',     'Raw values (counts / Rs Cr)'],
+  ['share',       'Market Share', 'Each bank as % of selected denominator (industry/category total of the SAME metric)'],
+  ['composition', 'Composition',  'Metric as % of its bundle — Micro shown as % of (On-site + Off-site + Micro); Debit Vol as % of total cash-W/D volume etc.'],
 ];
 
 let _container = null;

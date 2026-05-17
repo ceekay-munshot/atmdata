@@ -12,6 +12,7 @@ import { getState, subscribe } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries, shareChange,
   growth, rankBanks, metric, fmtCr, fmtInt, fmtPct, fmtPP,
+  applyView, isPctView, viewLabelShort, compositionDescription,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON } from '../chartopts.js';
@@ -141,9 +142,7 @@ function togglePlayTrend() {
   const allRows = rows();
   const filtered = filterRows(allRows, state);
   let data = series(filtered, state.metric, state.freq);
-  if (state.view === 'share') {
-    data = shareSeries(data, series(denominatorRows(allRows, state), state.metric, state.freq));
-  }
+  data = applyView(data, allRows, state, state.freq, state.metric);
   const values = data.map(d => d.value);
   const color = PALETTE[0];
   const btn = _root.querySelector('[data-action="play-trend"]');
@@ -174,14 +173,14 @@ function redraw() {
 function renderTrend(state, allRows, filtered) {
   const m = metric(state.metric);
   let data = series(filtered, state.metric, state.freq);
-  const isShare = state.view === 'share';
-  if (isShare) {
-    const denom = series(denominatorRows(allRows, state), state.metric, state.freq);
-    data = shareSeries(data, denom);
-  }
+  data = applyView(data, allRows, state, state.freq, state.metric);
+  const isShare = isPctView(state);
 
+  let subSuffix = '';
+  if (state.view === 'share') subSuffix = ' · Market share';
+  else if (state.view === 'composition') subSuffix = ` · ${compositionDescription(state.metric)}`;
   _root.querySelector('#trend-sub').textContent =
-    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'}${isShare ? ' · Market share' : ''}`;
+    `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'}${subSuffix}`;
 
   const xs = data.map(d => d.label);
   const ys = data.map(d => d.value);
@@ -230,14 +229,15 @@ function renderTrend(state, allRows, filtered) {
 function renderGrowth(state, allRows, filtered) {
   const m = metric(state.metric);
   const isShareChange = state.growthType === 'ShareChange';
-  const isShare = state.view === 'share' || isShareChange;
+  // For share-change calculations, we need a % view; if absolute is
+  // selected, fall back to Market Share denominator
+  const useState = (isShareChange && state.view === 'absolute')
+    ? { ...state, view: 'share' } : state;
+  const isShare = isPctView(useState);
 
-  // base series: either absolute or share-of-denominator
+  // base series: either absolute or share-of-denominator/composition
   let base = series(filtered, state.metric, state.freq);
-  if (isShare) {
-    const denom = series(denominatorRows(allRows, state), state.metric, state.freq);
-    base = shareSeries(base, denom);
-  }
+  base = applyView(base, allRows, useState, state.freq, state.metric);
 
   let gArr, yLabel, valSuffix, units;
   if (isShareChange) {
@@ -249,8 +249,12 @@ function renderGrowth(state, allRows, filtered) {
     yLabel = '%'; valSuffix = '%'; units = '%';
   }
 
+  let growthBase = '';
+  if (isShareChange) growthBase = ' (pp, YoY)';
+  else if (state.view === 'share') growthBase = ' · on market share';
+  else if (state.view === 'composition') growthBase = ' · on composition %';
   _root.querySelector('#growth-sub').textContent =
-    `${m.short} · ${state.growthType === 'ShareChange' ? 'Share Δ (pp, YoY)' : state.growthType}${isShare && !isShareChange ? ' · on market share' : ''}`;
+    `${m.short} · ${state.growthType === 'ShareChange' ? 'Share Δ' : state.growthType}${growthBase}`;
 
   const xs = base.map(d => d.label);
   const colored = gArr.map(v => {
@@ -588,20 +592,19 @@ function onExport(which) {
 
   if (which === 'trend' || which === 'all') {
     let data = series(filtered, state.metric, state.freq);
-    let header = ['Period', m.label];
-    if (state.view === 'share') {
-      const denom = series(denominatorRows(allRows, state), state.metric, state.freq);
-      data = shareSeries(data, denom);
-      header = ['Period', `${m.short} (market share %)`];
-    }
+    data = applyView(data, allRows, state, state.freq, state.metric);
+    const headerSuffix = state.view === 'share' ? ' (market share %)'
+      : state.view === 'composition' ? ' (composition %)' : '';
+    const header = ['Period', m.label + headerSuffix];
     sheets.push({ name: 'Long-term Trend', rows: [header, ...data.map(d => [d.label, d.value])] });
   }
 
   if (which === 'growth' || which === 'all') {
     let base = series(filtered, state.metric, state.freq);
     const isShareChange = state.growthType === 'ShareChange';
-    const isShare = state.view === 'share' || isShareChange;
-    if (isShare) base = shareSeries(base, series(denominatorRows(allRows, state), state.metric, state.freq));
+    const useState = (isShareChange && state.view === 'absolute')
+      ? { ...state, view: 'share' } : state;
+    base = applyView(base, allRows, useState, state.freq, state.metric);
     const g = isShareChange
       ? shareChange(base, state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1)
       : growth(base, state.growthType, state.freq);

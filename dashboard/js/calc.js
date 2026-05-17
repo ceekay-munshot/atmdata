@@ -285,3 +285,80 @@ export function denominatorRows(allRows, state) {
   }
   return allRows;
 }
+
+// ── COMPOSITION DENOM ─────────────────────────────────────────────────
+// When view === 'composition', the denominator is a *bundle* of related
+// metrics, not just the same metric.
+//   on_site / off_site / micro  → sum of (on_site + off_site + micro)
+//   dc_vol  / cc_vol            → sum of (dc_vol + cc_vol)
+//   dc_val  / cc_val            → sum of (dc_val + cc_val)
+// Category filter applies to the denominator; bank filter does NOT.
+const COMPOSITION_BUNDLE = {
+  on_site:   ['on_site', 'off_site', 'micro'],
+  off_site:  ['on_site', 'off_site', 'micro'],
+  micro:     ['on_site', 'off_site', 'micro'],
+  dc_vol:    ['dc_vol', 'cc_vol'],
+  cc_vol:    ['dc_vol', 'cc_vol'],
+  dc_val_cr: ['dc_val_cr', 'cc_val_cr'],
+  cc_val_cr: ['dc_val_cr', 'cc_val_cr'],
+};
+
+export function compositionBundle(metricKey) {
+  return COMPOSITION_BUNDLE[metricKey] || [metricKey];
+}
+
+export function compositionDenomSeries(allRows, state, freq, metricKey) {
+  const bundle = compositionBundle(metricKey);
+  const denomRows = denominatorRows(allRows, state);
+  let combined = null;
+  for (const k of bundle) {
+    const s = series(denomRows, k, freq);
+    if (!combined) {
+      combined = s.map(d => ({ key: d.key, label: d.label, value: d.value }));
+    } else {
+      const map = new Map(s.map(d => [d.key, d.value]));
+      for (const d of combined) {
+        const v2 = map.get(d.key);
+        if (d.value == null && v2 == null) continue;
+        d.value = (d.value ?? 0) + (v2 ?? 0);
+      }
+    }
+  }
+  return combined || [];
+}
+
+// One entry point used by every tab: given a numerator series, apply the
+// current view (absolute / share / composition) and return the final series.
+export function applyView(numerator, allRows, state, freq, metricKey) {
+  if (state.view === 'share') {
+    return shareSeries(numerator, series(denominatorRows(allRows, state), metricKey, freq));
+  }
+  if (state.view === 'composition') {
+    return shareSeries(numerator, compositionDenomSeries(allRows, state, freq, metricKey));
+  }
+  return numerator;
+}
+
+export function isPctView(state) {
+  return state.view === 'share' || state.view === 'composition';
+}
+
+export function viewLabelShort(state) {
+  if (state.view === 'composition') return 'Composition';
+  if (state.view === 'share')       return 'Market share';
+  return 'Absolute';
+}
+
+// Used by chart tooltips / formatters when in a % view.
+export function compositionDescription(metricKey) {
+  if (['on_site', 'off_site', 'micro'].includes(metricKey)) {
+    return '% of (On-site + Off-site + Micro)';
+  }
+  if (metricKey === 'dc_vol' || metricKey === 'cc_vol') {
+    return '% of total card cash-withdrawal volume';
+  }
+  if (metricKey === 'dc_val_cr' || metricKey === 'cc_val_cr') {
+    return '% of total card cash-withdrawal value';
+  }
+  return '% of bundle';
+}
