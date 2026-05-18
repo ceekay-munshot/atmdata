@@ -53,7 +53,7 @@ const HTML = `
               <button class="active" data-v="raw">Raw</button>
               <button data-v="indexed">Index = 100</button>
             </div>
-            <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
+            <button class="btn-icon btn-icon-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}</button>
             <button class="btn-icon" data-export="trend" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
@@ -67,7 +67,7 @@ const HTML = `
             <div class="card-sub" id="cmp-share-sub">—</div>
           </div>
           <div class="card-actions">
-            <button class="btn btn-play" data-action="play-share" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
+            <button class="btn-icon btn-icon-play" data-action="play-share" title="Replay timeline">${PLAY_ICON}</button>
             <button class="btn-icon" data-export="share" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
@@ -150,7 +150,7 @@ function stopPlay(key) {
   if (_playing[key]) { _playing[key].stop(); _playing[key] = null; }
   const sel = key === 'trend' ? '[data-action="play-trend"]' : '[data-action="play-share"]';
   const btn = _root && _root.querySelector(sel);
-  if (btn) { btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; }
+  if (btn) { btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; }
 }
 
 function togglePlay(key) {
@@ -161,7 +161,7 @@ function togglePlay(key) {
   const chart = key === 'trend' ? charts.trend : charts.share;
   const btn = _root.querySelector(sel);
   btn.classList.add('playing');
-  btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  btn.innerHTML = STOP_ICON;
   // Pick the right value formatter for the live label that follows each line tip
   const m = metric(getState().metric);
   let fmt;
@@ -170,7 +170,7 @@ function togglePlay(key) {
   else fmt = m.format;
   _playing[key] = playReplay(chart, {
     seriesData: cache.values, colors: cache.colors, durationMs: 2500, formatVal: fmt,
-    onDone: () => { _playing[key] = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
+    onDone: () => { _playing[key] = null; btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; redraw(); },
   });
 }
 

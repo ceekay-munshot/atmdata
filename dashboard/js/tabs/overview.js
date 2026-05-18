@@ -48,7 +48,7 @@ const HTML = `
         </div>
         <div class="card-actions">
           <button class="btn btn-forecast" data-action="toggle-forecast" title="Project 12 months forward with 95% confidence band">+12M Forecast</button>
-          <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
+          <button class="btn-icon btn-icon-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}</button>
           <button class="btn-icon" data-export="trend" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
@@ -194,7 +194,7 @@ export function unmount() {
 function stopPlayTrend() {
   if (_playing) { _playing.stop(); _playing = null; }
   const btn = _root && _root.querySelector('[data-action="play-trend"]');
-  if (btn) { btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; }
+  if (btn) { btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; }
 }
 
 function togglePlayTrend() {
@@ -209,11 +209,11 @@ function togglePlayTrend() {
   const color = PALETTE[0];
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
-  btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  btn.innerHTML = STOP_ICON;
   const fmt = (state.view === 'share' || state.view === 'composition') ? (v) => v.toFixed(1) + '%' : m.format;
   _playing = playReplay(charts.trend, {
     seriesData: [values], colors: [color], durationMs: 2500, formatVal: fmt,
-    onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
+    onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; redraw(); },
   });
 }
 
@@ -310,10 +310,10 @@ function renderTrend(state, allRows, filtered) {
 
   charts.trend.setOption({
     grid: { left: 70, right: 28, top: 24, bottom: 36 },
-    tooltip: { ...TOOLTIP_BASE,
+    tooltip: { ...TOOLTIP_BASE, confine: true,
       formatter: (params) => {
         if (params.componentType === 'markPoint' && params.data && params.data._annotation) {
-          return `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`;
+          return `<div style="width:300px;line-height:1.5;white-space:normal;word-wrap:break-word">${params.data._annotation}</div>`;
         }
         const items = Array.isArray(params) ? params : [params];
         const period = items[0].axisValue ?? items[0].name;
@@ -377,13 +377,13 @@ function renderTrend(state, allRows, filtered) {
         markPoint: { ...latestGlow,
           data: [...(latestGlow.data || []), ...annotMarks],
           tooltip: {
-            trigger: 'item',
+            trigger: 'item', confine: true,
             backgroundColor: 'rgba(15,23,42,0.94)', borderWidth: 0, borderRadius: 10,
             padding: [11, 14],
             textStyle: { color: '#fff', fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 500 },
-            extraCssText: 'box-shadow: 0 12px 32px rgba(15,23,42,0.22); border-radius: 10px;',
+            extraCssText: 'box-shadow: 0 12px 32px rgba(15,23,42,0.22); border-radius: 10px; max-width: 320px;',
             formatter: (params) => params.data && params.data._annotation
-              ? `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`
+              ? `<div style="width:300px;line-height:1.5;white-space:normal;word-wrap:break-word">${params.data._annotation}</div>`
               : '',
           },
         },
