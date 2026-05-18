@@ -320,6 +320,15 @@ button { font-family: inherit; cursor: pointer; }
 }
 .btn-play.playing:hover { color: white; filter: brightness(1.05); }
 
+.btn-forecast { gap: 4px; font-weight: 600; }
+.btn-forecast.on {
+  background: var(--brand-grad);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 3px 8px rgba(79,70,229,0.30);
+}
+.btn-forecast.on:hover { color: white; filter: brightness(1.05); }
+
 /* ─── Main ─────────────────────────────────────────────────────────────── */
 .app-main {
   flex: 1;

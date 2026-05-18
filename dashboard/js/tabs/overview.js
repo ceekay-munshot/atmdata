@@ -16,8 +16,9 @@ import {
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle, hexA } from '../chartopts.js';
 import { findChartAnnotations } from '../annotations.js';
+import { forecastSeries } from '../forecast.js';
 
 // Metric key → field name used to look up curated annotations
 const METRIC_FIELD = {
@@ -33,6 +34,7 @@ let _sortState = { col: 'value', dir: 'desc' };  // for bottom table
 let _tableShowAll = false;
 let _tableMode = 'growth';     // 'growth' | 'cagr'
 let _tableFreq = 'M';          // 'M' | 'Q' | 'Y' (Q/Y land in a follow-up)
+let _showForecast = false;     // 12-month Holt-Winters projection on trend chart
 let _playing = null;  // active replay handle (for the trend chart)
 
 const HTML = `
@@ -45,6 +47,7 @@ const HTML = `
           <div class="card-sub" id="trend-sub">—</div>
         </div>
         <div class="card-actions">
+          <button class="btn btn-forecast" data-action="toggle-forecast" title="Project 12 months forward with 95% confidence band">+12M Forecast</button>
           <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
           <button class="btn" data-export="trend">Export</button>
         </div>
@@ -135,8 +138,15 @@ export function mount(root) {
     btn.addEventListener('click', () => onExport(btn.dataset.export));
   });
 
-  // Replay button on the hero trend chart
+  // Replay + Forecast buttons on the hero trend chart
   root.querySelector('[data-action="play-trend"]').addEventListener('click', togglePlayTrend);
+  root.querySelector('[data-action="toggle-forecast"]').addEventListener('click', (e) => {
+    _showForecast = !_showForecast;
+    const btn = e.target.closest('[data-action="toggle-forecast"]');
+    btn.classList.toggle('on', _showForecast);
+    btn.textContent = _showForecast ? '✓ Forecast on' : '+12M Forecast';
+    redraw();
+  });
 
   // Table-local toggles (Growth / CAGR + Monthly / Q / Y)
   root.querySelector('#ov-table-mode').addEventListener('click', (e) => {
@@ -248,6 +258,39 @@ function renderTrend(state, allRows, filtered) {
   }) : [];
   const latestGlow = latestGlowMarkPoint(xs, ys, color);
 
+  // Forecast — only meaningful in Monthly view + Absolute view (extrapolating
+  // shares doesn't make obvious sense without context)
+  let fcst = null;
+  if (_showForecast && state.freq === 'M' && !isShare) {
+    fcst = forecastSeries(ys, xs, 12);
+  }
+  const xAll = fcst ? [...xs, ...fcst.futureLabels] : xs;
+  const histPadded = fcst ? fcst.history : ys;
+
+  // Forecast band trick: stack (lower invisible) + (upper-lower filled) so the
+  // area between lower95 and upper95 is shaded translucently
+  const bandSeries = fcst ? [
+    {
+      name: 'lower95', type: 'line', stack: 'fcst-band', symbol: 'none',
+      lineStyle: { opacity: 0 }, areaStyle: { color: 'transparent' },
+      data: fcst.lower95, silent: true, smooth: true, animation: false,
+    },
+    {
+      name: 'band', type: 'line', stack: 'fcst-band', symbol: 'none',
+      lineStyle: { opacity: 0 },
+      areaStyle: { color: hexA(color, 0.18) },
+      data: fcst.upper95.map((u, i) => (u == null || fcst.lower95[i] == null) ? null : u - fcst.lower95[i]),
+      silent: true, smooth: true, animation: false,
+    },
+  ] : [];
+
+  const forecastLineSeries = fcst ? [{
+    name: 'forecast', type: 'line', symbol: 'none', smooth: true,
+    lineStyle: { color, width: 2.2, type: 'dashed', cap: 'round' },
+    data: fcst.forecast, silent: true, animation: false,
+    z: 5,
+  }] : [];
+
   charts.trend.setOption({
     grid: { left: 70, right: 28, top: 24, bottom: 36 },
     tooltip: { ...TOOLTIP_BASE,
@@ -255,50 +298,83 @@ function renderTrend(state, allRows, filtered) {
         if (params.componentType === 'markPoint' && params.data && params.data._annotation) {
           return `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`;
         }
-        const p = Array.isArray(params) ? params[0] : params;
-        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block"></span>
-                  ${m.short}: <b>${valFmt(p.value)}</b>
-                </div>`;
+        const items = Array.isArray(params) ? params : [params];
+        const period = items[0].axisValue ?? items[0].name;
+        // Find actual + forecast values for this x-position
+        const actual = items.find(p => p.seriesName === 'actual');
+        const forecast = items.find(p => p.seriesName === 'forecast');
+        let html = `<div style="font-weight:600;margin-bottom:4px">${period}</div>`;
+        if (actual && actual.value != null) {
+          html += `<div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block"></span>
+            ${m.short}: <b>${valFmt(actual.value)}</b></div>`;
+        }
+        if (forecast && forecast.value != null) {
+          html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px;color:#cbd2dc">
+            <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block;opacity:0.55"></span>
+            forecast: <b>${valFmt(forecast.value)}</b></div>`;
+        }
+        return html;
       },
     },
-    xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
+    xAxis: { ...AXIS_X, data: xAll, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
-    series: [{
-      type: 'line', smooth: true, showSymbol: false,
-      lineStyle: softLineStyle(color, 2.6),
-      areaStyle: { color: gradientArea(color) },
-      emphasis: { focus: 'series' },
-      markLine: mean != null ? {
-        symbol: 'none', silent: true,
-        lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },
-        label: {
-          color: '#64748b', fontSize: 10, fontWeight: 600,
-          position: 'insideStartTop', distance: 4,
-          backgroundColor: 'rgba(255,255,255,0.92)',
-          padding: [3, 7], borderRadius: 6,
-          borderColor: '#e3e6ec', borderWidth: 1,
-          formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)),
+    series: [
+      {
+        name: 'actual',
+        type: 'line', smooth: true, showSymbol: false,
+        lineStyle: softLineStyle(color, 2.6),
+        areaStyle: { color: gradientArea(color) },
+        emphasis: { focus: 'series' },
+        markLine: {
+          symbol: 'none', silent: true,
+          lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },
+          label: {
+            color: '#64748b', fontSize: 10, fontWeight: 600,
+            position: 'insideStartTop', distance: 4,
+            backgroundColor: 'rgba(255,255,255,0.92)',
+            padding: [3, 7], borderRadius: 6,
+            borderColor: '#e3e6ec', borderWidth: 1,
+            formatter: 'avg ' + (isShare ? mean.toFixed(2) + '%' : compactNum(mean)),
+          },
+          data: mean != null ? [
+            { yAxis: mean },
+            ...(fcst ? [{
+              xAxis: xs.length - 1,
+              lineStyle: { color: '#7c3aed', type: 'solid', width: 1.5, opacity: 0.6 },
+              label: { show: true, position: 'insideEndTop', distance: 6,
+                color: '#7c3aed', backgroundColor: 'rgba(255,255,255,0.92)',
+                padding: [3, 7], borderRadius: 6, borderColor: '#ddd6fe', borderWidth: 1,
+                formatter: 'today' },
+            }] : []),
+          ] : (fcst ? [{
+              xAxis: xs.length - 1,
+              lineStyle: { color: '#7c3aed', type: 'solid', width: 1.5, opacity: 0.6 },
+              label: { show: true, position: 'insideEndTop', distance: 6,
+                color: '#7c3aed', backgroundColor: 'rgba(255,255,255,0.92)',
+                padding: [3, 7], borderRadius: 6, borderColor: '#ddd6fe', borderWidth: 1,
+                formatter: 'today' },
+            }] : []),
         },
-        data: [{ yAxis: mean }],
-      } : undefined,
-      markPoint: { ...latestGlow,
-        data: [...(latestGlow.data || []), ...annotMarks],
-        tooltip: {
-          trigger: 'item',
-          backgroundColor: 'rgba(15,23,42,0.94)', borderWidth: 0, borderRadius: 10,
-          padding: [11, 14],
-          textStyle: { color: '#fff', fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 500 },
-          extraCssText: 'box-shadow: 0 12px 32px rgba(15,23,42,0.22); border-radius: 10px;',
-          formatter: (params) => params.data && params.data._annotation
-            ? `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`
-            : '',
+        markPoint: { ...latestGlow,
+          data: [...(latestGlow.data || []), ...annotMarks],
+          tooltip: {
+            trigger: 'item',
+            backgroundColor: 'rgba(15,23,42,0.94)', borderWidth: 0, borderRadius: 10,
+            padding: [11, 14],
+            textStyle: { color: '#fff', fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 500 },
+            extraCssText: 'box-shadow: 0 12px 32px rgba(15,23,42,0.22); border-radius: 10px;',
+            formatter: (params) => params.data && params.data._annotation
+              ? `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`
+              : '',
+          },
         },
+        data: histPadded,
       },
-      data: ys,
-    }],
+      ...bandSeries,
+      ...forecastLineSeries,
+    ],
     animation: true, animationDuration: 600, animationEasing: 'cubicOut',
   }, true);
 }
