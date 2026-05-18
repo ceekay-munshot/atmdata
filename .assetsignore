@@ -1,0 +1,11 @@
+scripts/
+data/raw/
+data/processed/
+data/_errors.log
+data/overrides.json
+requirements.txt
+README.md
+.gitignore
+.github/
+wrangler.jsonc
+.assetsignore
