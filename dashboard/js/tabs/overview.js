@@ -100,8 +100,7 @@ const HTML = `
           </div>
           <div class="mini-toggle" id="ov-table-freq" title="Window scale for the growth columns">
             <button class="active" data-v="M">Monthly</button>
-            <button data-v="Q" disabled title="Coming soon">Quarterly</button>
-            <button data-v="Y" disabled title="Coming soon">Yearly</button>
+            <button data-v="Y">Yearly</button>
           </div>
           <button class="btn primary" data-export="all">Export All to Excel</button>
         </div>
@@ -531,6 +530,15 @@ function renderTable(state, allRows, filtered) {
     { id: 'c3',  label: '3M CAGR', months: 3, cagr: true },
     { id: 'c6',  label: '6M CAGR', months: 6, cagr: true },
     { id: 'c9',  label: '9M CAGR', months: 9, cagr: true },
+  ] : (_tableFreq === 'Y' && _tableMode === 'growth') ? [
+    { id: 'g1y',  label: '1Y',  months: 12,  cagr: false },
+    { id: 'g3y',  label: '3Y',  months: 36,  cagr: false },
+    { id: 'g5y',  label: '5Y',  months: 60,  cagr: false },
+    { id: 'g10y', label: '10Y', months: 120, cagr: false },
+  ] : (_tableFreq === 'Y' && _tableMode === 'cagr') ? [
+    { id: 'c3y',  label: '3Y CAGR',  months: 36,  cagr: true },
+    { id: 'c5y',  label: '5Y CAGR',  months: 60,  cagr: true },
+    { id: 'c10y', label: '10Y CAGR', months: 120, cagr: true },
   ] : [];
 
   // Pre-aggregate reference values per ref-period (each bank: sum field)
