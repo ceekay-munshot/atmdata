@@ -586,6 +586,50 @@ table.tbl tbody tr:last-child td { border-bottom: none; }
   background-color: var(--bg-elev);
 }
 
+/* ─── Productivity category cards ──────────────────────────────────────── */
+.prod-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.prod-cat-card {
+  --c: #4f46e5;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--c);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+  box-shadow: var(--shadow-sm);
+}
+.prod-cat-name {
+  font-size: 12px; font-weight: 700;
+  color: var(--c);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.prod-cat-row {
+  display: flex; align-items: baseline; gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.prod-cat-lbl {
+  font-size: 10px; font-weight: 600;
+  color: var(--fg-3);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  width: 64px;
+}
+.prod-cat-val {
+  font-size: 18px; font-weight: 700;
+  color: var(--fg);
+}
+.prod-cat-unit {
+  font-size: 10px; color: var(--fg-4);
+}
+.prod-cat-meta {
+  margin-top: 4px;
+  font-size: 11px; color: var(--fg-3);
+}
+
 /* ─── Market Share movers ──────────────────────────────────────────────── */
 .mk-movers-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
