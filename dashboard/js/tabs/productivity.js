@@ -23,6 +23,8 @@ let charts = {};
 let _root = null;
 let _unsub = null;
 let _side = 'debit';        // 'debit' | 'credit' | 'both'
+let _minAtms = 100;         // drop banks with smaller own networks (ratio gets
+                            // inflated by interchange usage on other banks' ATMs)
 
 const HTML = `
   <div class="grid">
@@ -33,6 +35,13 @@ const HTML = `
           <div class="card-sub" id="prod-sub">—</div>
         </div>
         <div class="card-actions">
+          <div class="mini-toggle" id="prod-min" title="Hide banks with fewer than N own-network ATMs — those banks' ratios are inflated by their customers using OTHER banks' ATMs (interchange).">
+            <button data-v="0">All</button>
+            <button data-v="50">50+</button>
+            <button class="active" data-v="100">100+</button>
+            <button data-v="500">500+</button>
+            <button data-v="1000">1000+</button>
+          </div>
           <div class="mini-toggle" id="prod-side">
             <button class="active" data-v="debit">Debit</button>
             <button data-v="credit">Credit</button>
@@ -91,6 +100,12 @@ export function mount(root) {
     root.querySelectorAll('#prod-side button').forEach(x => x.classList.toggle('active', x.dataset.v === b.dataset.v));
     redraw();
   });
+  root.querySelector('#prod-min').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    _minAtms = +b.dataset.v;
+    root.querySelectorAll('#prod-min button').forEach(x => x.classList.toggle('active', x.dataset.v === b.dataset.v));
+    redraw();
+  });
 
   redraw();
   _unsub = subscribe(redraw);
@@ -113,7 +128,7 @@ function bankMetrics(allRows, period, state) {
   const out = [];
   for (const r of slice) {
     const atms = (r.on_site_atms ?? 0) + (r.off_site_atms ?? 0);
-    if (!atms) continue;
+    if (!atms || atms < _minAtms) continue;
 
     let vol = 0, valThou = 0;
     if (_side === 'both') {
@@ -144,8 +159,9 @@ function redraw() {
   const data = bankMetrics(rows(), period, state);
   const sideCfg = SIDE_KEYS[_side];
 
+  const minLabel = _minAtms > 0 ? ` · min ${_minAtms} ATMs` : '';
   _root.querySelector('#prod-sub').textContent =
-    `${sideCfg.label} cash withdrawal · ${period} · ATMs = on-site + off-site · ${state.category !== 'all' ? state.category : 'industry'} (${data.length} banks)`;
+    `${sideCfg.label} cash withdrawal · ${period} · ATMs = on-site + off-site${minLabel} · ${state.category !== 'all' ? state.category : 'industry'} (${data.length} banks)`;
 
   renderScatter(data, period, sideCfg);
   renderCategoryStrip(data, period, sideCfg);
