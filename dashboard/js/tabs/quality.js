@@ -5,6 +5,7 @@
 import { rows, manifest, periods as periodsList, firstPeriod, latestPeriod } from '../data.js';
 import { getState, subscribe } from '../state.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
+import { EXCEL_ICON } from '../chartopts.js';
 
 let _root = null;
 let _unsub = null;
@@ -59,7 +60,7 @@ const HTML = `
           <div class="card-sub">Files RBI published that we could not parse — global, not affected by date filter</div>
         </div>
         <div class="card-actions">
-          <button class="btn primary" data-export="all">Export Data Quality Report</button>
+          <button class="btn-icon primary" data-export="all" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
       <pre id="dq-errors" class="dq-pre"></pre>

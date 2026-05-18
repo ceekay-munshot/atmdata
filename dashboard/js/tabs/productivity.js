@@ -11,7 +11,7 @@
 import { rows, latestPeriod } from '../data.js';
 import { getState, subscribe } from '../state.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, softLineStyle } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, softLineStyle, EXCEL_ICON } from '../chartopts.js';
 
 const SIDE_KEYS = {
   debit:  { vol: 'dc_vol', val: 'dc_val_thousands', label: 'Debit' },
@@ -47,7 +47,7 @@ const HTML = `
             <button data-v="credit">Credit</button>
             <button data-v="both">Both</button>
           </div>
-          <button class="btn primary" data-export="all">Export to Excel</button>
+          <button class="btn-icon primary" data-export="all" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
       <div class="chart tall" id="chart-prod-scatter"></div>

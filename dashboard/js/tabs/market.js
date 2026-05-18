@@ -12,7 +12,7 @@ import {
   rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, hexA, indexTo100, softLineStyle } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, hexA, indexTo100, softLineStyle } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
@@ -60,7 +60,7 @@ const HTML = `
           <div class="card-actions">
             <label class="mk-base-lbl">Base:</label>
             <input type="month" id="mk-base" class="fb-input mk-base-input" />
-            <button class="btn" data-export="change">Export</button>
+            <button class="btn-icon" data-export="change" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
         <div class="chart" id="chart-mk-change"></div>
@@ -94,7 +94,7 @@ const HTML = `
             <button class="active" data-v="36">36 m</button>
             <button data-v="60">60 m</button>
           </div>
-          <button class="btn primary" data-export="all">Export All to Excel</button>
+          <button class="btn-icon primary" data-export="all" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
       <div class="chart tall" id="chart-mk-heat"></div>

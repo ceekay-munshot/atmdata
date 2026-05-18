@@ -329,6 +329,33 @@ button { font-family: inherit; cursor: pointer; }
 }
 .btn-forecast.on:hover { color: white; filter: brightness(1.05); }
 
+/* Icon-only button (e.g. Export → Excel icon) */
+.btn-icon {
+  width: 36px; height: 36px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-elev);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 150ms;
+}
+.btn-icon:hover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.18);
+}
+.btn-icon svg { width: 22px; height: 22px; display: block; }
+.btn-icon.primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.16);
+}
+.btn-icon.primary:hover {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  box-shadow: 0 5px 14px rgba(22, 163, 74, 0.25);
+}
+
 /* ─── Main ─────────────────────────────────────────────────────────────── */
 .app-main {
   flex: 1;

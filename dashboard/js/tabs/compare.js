@@ -10,7 +10,7 @@ import {
   growth, rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, indexTo100, softLineStyle } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, indexTo100, softLineStyle } from '../chartopts.js';
 
 const ALL_CATEGORIES = ['Public Sector', 'Private Sector', 'Foreign Bank', 'Payment Bank', 'Small Finance Bank'];
 
@@ -54,7 +54,7 @@ const HTML = `
               <button data-v="indexed">Index = 100</button>
             </div>
             <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
-            <button class="btn" data-export="trend">Export</button>
+            <button class="btn-icon" data-export="trend" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
         <div class="chart" id="chart-cmp-trend"></div>
@@ -68,7 +68,7 @@ const HTML = `
           </div>
           <div class="card-actions">
             <button class="btn btn-play" data-action="play-share" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
-            <button class="btn" data-export="share">Export</button>
+            <button class="btn-icon" data-export="share" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
         <div class="chart" id="chart-cmp-share"></div>
@@ -82,7 +82,7 @@ const HTML = `
           <div class="card-sub" id="cmp-tbl-sub">—</div>
         </div>
         <div class="card-actions">
-          <button class="btn primary" data-export="all">Export All to Excel</button>
+          <button class="btn-icon primary" data-export="all" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
       <div class="tbl-wrap" id="cmp-tbl"></div>

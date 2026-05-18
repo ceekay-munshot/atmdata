@@ -14,7 +14,7 @@ import {
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
 import { findChartAnnotations } from '../annotations.js';
 
 let charts = {};
@@ -54,7 +54,7 @@ const HTML = `
             <div class="card-sub" id="infra-growth-sub">—</div>
           </div>
           <div class="card-actions">
-            <button class="btn" data-export="growth">Export</button>
+            <button class="btn-icon" data-export="growth" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
         <div class="chart" id="chart-infra-growth"></div>
@@ -92,7 +92,7 @@ const HTML = `
             <button class="active" data-v="M">Monthly</button>
             <button data-v="Y">Yearly</button>
           </div>
-          <button class="btn primary" data-export="all">Export All to Excel</button>
+          <button class="btn-icon primary" data-export="all" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
       <div class="tbl-wrap" id="infra-tbl"></div>
