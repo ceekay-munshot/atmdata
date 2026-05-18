@@ -18,46 +18,54 @@ export const METRICS = {
   on_site: {
     field: 'on_site_atms',
     label: 'On-site ATMs/CRMs', short: 'On-site',
-    isStock: true, unit: 'count',
+    isStock: true, unit: 'count', unitShort: 'ATMs',
     transform: v => v, format: fmtInt,
   },
   off_site: {
     field: 'off_site_atms',
     label: 'Off-site ATMs/CRMs', short: 'Off-site',
-    isStock: true, unit: 'count',
+    isStock: true, unit: 'count', unitShort: 'ATMs',
     transform: v => v, format: fmtInt,
   },
   micro: {
     field: 'micro_atms',
     label: 'Micro ATMs', short: 'Micro',
-    isStock: true, unit: 'count',
+    isStock: true, unit: 'count', unitShort: 'ATMs',
     transform: v => v, format: fmtInt,
   },
   dc_vol: {
     field: 'dc_vol',
     label: 'Debit Card Cash Withdrawal Volume', short: 'Debit Vol',
-    isStock: false, unit: 'count',
+    isStock: false, unit: 'count', unitShort: 'txns',
     transform: v => v, format: fmtInt,
   },
   dc_val_cr: {
     field: 'dc_val_thousands',
     label: 'Debit Card Cash Withdrawal Value (Rs Cr)', short: 'Debit Val (Cr)',
-    isStock: false, unit: 'currency_cr',
+    isStock: false, unit: 'currency_cr', unitShort: '',
     transform: toCr, format: fmtCr,
   },
   cc_vol: {
     field: 'cc_vol',
     label: 'Credit Card Cash Withdrawal Volume', short: 'Credit Vol',
-    isStock: false, unit: 'count',
+    isStock: false, unit: 'count', unitShort: 'txns',
     transform: v => v, format: fmtInt,
   },
   cc_val_cr: {
     field: 'cc_val_thousands',
     label: 'Credit Card Cash Withdrawal Value (Rs Cr)', short: 'Credit Val (Cr)',
-    isStock: false, unit: 'currency_cr',
+    isStock: false, unit: 'currency_cr', unitShort: '',
     transform: toCr, format: fmtCr,
   },
 };
+
+// Format value with metric's natural unit suffix (e.g. "1,234 txns", "₹5.6 K Cr").
+// Used in tooltips/labels so users always know what they're looking at.
+export function fmtWithUnit(m, v) {
+  const s = m.format(v);
+  if (s === '—') return s;
+  return m.unitShort ? `${s} ${m.unitShort}` : s;
+}
 
 export function metric(key) {
   const m = METRICS[key];

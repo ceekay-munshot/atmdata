@@ -7,7 +7,7 @@ import { rows, latestPeriod, allBanks, allCategories, banksInCategory } from '..
 import { getState, subscribe, setState } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries,
-  growth, rankBanks, metric,
+  growth, rankBanks, metric, fmtWithUnit,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, indexTo100, softLineStyle } from '../chartopts.js';
@@ -313,17 +313,14 @@ function renderTrend(state, allRows) {
     grid: { left: 70, right: 24, top: 40, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 },
               icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
-    tooltip: { ...TOOLTIP_BASE,
-      formatter: (params) => {
-        let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
-        for (const p of params.sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))) {
-          if (p.value == null) continue;
-          const valStr = _indexedTrend ? p.value.toFixed(1) : m.format(p.value);
-          html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
+      formatter: (p) => {
+        if (p.value == null) return '';
+        const valStr = _indexedTrend ? p.value.toFixed(1) : fmtWithUnit(m, p.value);
+        return `<div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+          <div style="display:flex;align-items:center;gap:6px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
-            ${truncate(p.seriesName, 24)}: <b>${valStr}</b></div>`;
-        }
-        return html;
+            ${truncate(p.seriesName, 28)}: <b>${valStr}</b></div>`;
       },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
@@ -383,16 +380,13 @@ function renderShare(state, allRows) {
     grid: { left: 60, right: 60, top: 40, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 },
               icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
-    tooltip: { ...TOOLTIP_BASE,
-      formatter: (params) => {
-        let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
-        for (const p of params.sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))) {
-          if (p.value == null) continue;
-          html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
+      formatter: (p) => {
+        if (p.value == null) return '';
+        return `<div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+          <div style="display:flex;align-items:center;gap:6px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
-            ${truncate(p.seriesName, 24)}: <b>${p.value.toFixed(2)}%</b></div>`;
-        }
-        return html;
+            ${truncate(p.seriesName, 28)}: <b>${p.value.toFixed(2)}%</b></div>`;
       },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },

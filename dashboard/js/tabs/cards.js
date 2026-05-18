@@ -9,7 +9,7 @@ import { rows, latestPeriod } from '../data.js';
 import { getState, subscribe, setState } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries,
-  growth, rankBanks, metric, METRICS, fmtCr, fmtInt,
+  growth, rankBanks, metric, METRICS, fmtCr, fmtInt, fmtWithUnit,
   applyView, isPctView, compositionDescription,
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
@@ -187,7 +187,9 @@ function togglePlayTrend() {
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
   btn.innerHTML = STOP_ICON;
-  const fmt = (state.view === 'share' || state.view === 'composition') ? (v) => v.toFixed(1) + '%' : m.format;
+  const fmt = (state.view === 'share' || state.view === 'composition')
+    ? (v) => v.toFixed(1) + '%'
+    : (v) => fmtWithUnit(m, v);
   _playing = playReplay(charts.trend, {
     seriesData: [values], colors: [color], durationMs: 2500, formatVal: fmt,
     onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; redraw(); },
@@ -236,7 +238,9 @@ function renderTrend(state, allRows, filtered) {
   const xs = data.map(d => d.label);
   const ys = data.map(d => d.value);
   const color = state.metric.startsWith('dc_') ? PALETTE[0] : PALETTE[3];
-  const valFmt = isShare ? (v => v == null ? '—' : v.toFixed(2) + '%') : m.format;
+  const valFmt = isShare
+    ? (v => v == null ? '—' : v.toFixed(2) + '%')
+    : (v => v == null ? '—' : fmtWithUnit(m, v));
   const valid = ys.filter(v => v != null);
   const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
 
@@ -341,7 +345,7 @@ function renderCompare(state, allRows, filtered) {
           if (p.value == null) continue;
           html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
-            ${p.seriesName}: <b>${measure === 'value' ? fmtCr(p.value) : fmtInt(p.value)}</b></div>`;
+            ${p.seriesName}: <b>${measure === 'value' ? fmtCr(p.value) : fmtInt(p.value) + ' txns'}</b></div>`;
         }
         return html;
       },

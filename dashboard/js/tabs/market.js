@@ -263,17 +263,14 @@ function renderTrend(state, allRows, universe, topBanks) {
   charts.trend.setOption({
     grid: { left: 60, right: 80, top: 44, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 }, icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
-    tooltip: { ...TOOLTIP_BASE,
-      formatter: (params) => {
-        let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
-        for (const p of params.sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))) {
-          if (p.value == null) continue;
-          const v = _trendIndexed ? p.value.toFixed(1) : (p.value.toFixed(2) + '%');
-          html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
+      formatter: (p) => {
+        if (p.value == null) return '';
+        const v = _trendIndexed ? p.value.toFixed(1) : (p.value.toFixed(2) + '%');
+        return `<div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+          <div style="display:flex;align-items:center;gap:6px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
-            ${truncate(p.seriesName, 22)}: <b>${v}</b></div>`;
-        }
-        return html;
+            ${truncate(p.seriesName, 28)}: <b>${v}</b></div>`;
       },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },

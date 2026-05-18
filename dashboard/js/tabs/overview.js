@@ -11,7 +11,7 @@ import { rows, manifest, allBanks, banksInCategory, latestPeriod } from '../data
 import { getState, subscribe } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries, shareChange,
-  growth, rankBanks, metric, fmtCr, fmtInt, fmtPct, fmtPP,
+  growth, rankBanks, metric, fmtCr, fmtInt, fmtPct, fmtPP, fmtWithUnit,
   applyView, isPctView, viewLabelShort, compositionDescription,
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
@@ -210,7 +210,9 @@ function togglePlayTrend() {
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
   btn.innerHTML = STOP_ICON;
-  const fmt = (state.view === 'share' || state.view === 'composition') ? (v) => v.toFixed(1) + '%' : m.format;
+  const fmt = (state.view === 'share' || state.view === 'composition')
+    ? (v) => v.toFixed(1) + '%'
+    : (v) => fmtWithUnit(m, v);
   _playing = playReplay(charts.trend, {
     seriesData: [values], colors: [color], durationMs: 2500, formatVal: fmt,
     onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; redraw(); },
@@ -259,7 +261,9 @@ function renderTrend(state, allRows, filtered) {
   const xs = data.map(d => d.label);
   const ys = data.map(d => d.value);
   const color = PALETTE[0];
-  const valFmt = isShare ? (v => v == null ? '—' : v.toFixed(2) + '%') : m.format;
+  const valFmt = isShare
+    ? (v => v == null ? '—' : v.toFixed(2) + '%')
+    : (v => v == null ? '—' : fmtWithUnit(m, v));
 
   // Compute mean for reference line
   const valid = ys.filter(v => v != null);

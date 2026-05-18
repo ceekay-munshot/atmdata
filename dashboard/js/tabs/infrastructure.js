@@ -9,7 +9,7 @@ import { rows, latestPeriod } from '../data.js';
 import { getState, subscribe, setState } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries,
-  growth, rankBanks, metric, METRICS,
+  growth, rankBanks, metric, METRICS, fmtWithUnit,
   applyView, isPctView, compositionDescription,
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
@@ -183,7 +183,9 @@ function togglePlayTrend() {
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
   btn.innerHTML = STOP_ICON;
-  const fmt = (state.view === 'share' || state.view === 'composition') ? (v) => v.toFixed(1) + '%' : m.format;
+  const fmt = (state.view === 'share' || state.view === 'composition')
+    ? (v) => v.toFixed(1) + '%'
+    : (v) => fmtWithUnit(m, v);
   _playing = playReplay(charts.trend, {
     seriesData: [values], colors: [color], durationMs: 2500, formatVal: fmt,
     onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; redraw(); },
@@ -224,7 +226,9 @@ function renderTrend(state, allRows, filtered) {
   const xs = data.map(d => d.label);
   const ys = data.map(d => d.value);
   const color = PALETTE[0];
-  const valFmt = isShare ? (v => v == null ? '—' : v.toFixed(2) + '%') : m.format;
+  const valFmt = isShare
+    ? (v => v == null ? '—' : v.toFixed(2) + '%')
+    : (v => v == null ? '—' : fmtWithUnit(m, v));
   const valid = ys.filter(v => v != null);
   const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
 
@@ -408,27 +412,34 @@ function renderMix(state, allRows, filtered) {
   }
 
   _root.querySelector('#infra-mix-sub').textContent =
-    `${_mixMode === 'pct' ? '100% stacked share' : 'Absolute count'} · ${freqLabel(state.freq)}`;
+    `${_mixMode === 'pct' ? '100% stacked share' : 'Absolute count'} · ${freqLabel(state.freq)}` +
+    (hasMicro && _mixMode !== 'pct' ? '  ·  Micro ATMs (biometric/POS) dwarf classic on/off-site fleets post-2020' : '');
 
+  // Distinct colors so legend dots can't be confused for adjacent stack bands:
+  // indigo (On-site) → amber (Off-site) → emerald (Micro)
+  const MIX_COLORS = { on: '#4f46e5', off: '#f59e0b', micro: '#10b981' };
   const seriesArr = [
     {
       name: 'On-site', type: 'line', stack: 'mix', smooth: true, showSymbol: false,
-      lineStyle: { color: PALETTE[0], width: 0 },
-      areaStyle: { color: PALETTE[0], opacity: 0.85 },
+      lineStyle: { color: MIX_COLORS.on, width: 0 },
+      itemStyle: { color: MIX_COLORS.on },
+      areaStyle: { color: MIX_COLORS.on, opacity: 0.85 },
       data: onsiteY,
     },
     {
       name: 'Off-site', type: 'line', stack: 'mix', smooth: true, showSymbol: false,
-      lineStyle: { color: PALETTE[1], width: 0 },
-      areaStyle: { color: PALETTE[1], opacity: 0.85 },
+      lineStyle: { color: MIX_COLORS.off, width: 0 },
+      itemStyle: { color: MIX_COLORS.off },
+      areaStyle: { color: MIX_COLORS.off, opacity: 0.85 },
       data: offsiteY,
     },
   ];
   if (hasMicro) {
     seriesArr.push({
       name: 'Micro', type: 'line', stack: 'mix', smooth: true, showSymbol: false,
-      lineStyle: { color: PALETTE[2], width: 0 },
-      areaStyle: { color: PALETTE[2], opacity: 0.85 },
+      lineStyle: { color: MIX_COLORS.micro, width: 0 },
+      itemStyle: { color: MIX_COLORS.micro },
+      areaStyle: { color: MIX_COLORS.micro, opacity: 0.85 },
       data: microY,
     });
   }
@@ -441,7 +452,9 @@ function renderMix(state, allRows, filtered) {
         let html = `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>`;
         for (const p of params) {
           if (p.value == null) continue;
-          const v = _mixMode === 'pct' ? p.value.toFixed(1) + '%' : compactNum(p.value);
+          const v = _mixMode === 'pct'
+            ? p.value.toFixed(1) + '%'
+            : p.value.toLocaleString('en-IN') + ' ATMs';
           html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
             ${p.seriesName}: <b>${v}</b></div>`;
