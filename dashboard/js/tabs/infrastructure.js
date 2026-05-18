@@ -234,6 +234,7 @@ function renderTrend(state, allRows, filtered) {
           : state.metric === 'off_site' ? 'off_site_atms'
           : state.metric === 'micro' ? 'micro_atms' : state.metric,
     isStock: m.isStock,
+    freq: state.freq,
     formatVal: m.format,
   }) : [];
 

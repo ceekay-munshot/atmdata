@@ -15,6 +15,12 @@ import {
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
+import { findChartAnnotations } from '../annotations.js';
+
+const METRIC_FIELD = {
+  dc_vol: 'dc_vol', dc_val_cr: 'dc_val_thousands',
+  cc_vol: 'cc_vol', cc_val_cr: 'cc_val_thousands',
+};
 
 let charts = {};
 let _root = null;
@@ -224,13 +230,28 @@ function renderTrend(state, allRows, filtered) {
     return;
   }
 
+  const annotMarks = (!isShare) ? findChartAnnotations(data, {
+    bank: state.banks && state.banks.length === 1 ? state.banks[0] : null,
+    metric: METRIC_FIELD[state.metric] || state.metric,
+    isStock: m.isStock,
+    freq: state.freq,
+    formatVal: m.format,
+  }) : [];
+  const latestGlow = latestGlowMarkPoint(xs, ys, color);
+
   charts.trend.setOption({
     grid: { left: 70, right: 28, top: 24, bottom: 36 },
     tooltip: { ...TOOLTIP_BASE,
-      formatter: (params) => `<div style="font-weight:600;margin-bottom:4px">${params[0].axisValue}</div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="width:8px;height:8px;background:${color};border-radius:50%"></span>
-          ${m.short} (For the month): <b>${valFmt(params[0].value)}</b></div>`,
+      formatter: (params) => {
+        if (params.componentType === 'markPoint' && params.data && params.data._annotation) {
+          return `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`;
+        }
+        const p = Array.isArray(params) ? params[0] : params;
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;background:${color};border-radius:50%"></span>
+            ${m.short} (For the month): <b>${valFmt(p.value)}</b></div>`;
+      },
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
@@ -252,7 +273,7 @@ function renderTrend(state, allRows, filtered) {
         },
         data: [{ yAxis: mean }],
       } : undefined,
-      markPoint: latestGlowMarkPoint(xs, ys, color),
+      markPoint: { ...latestGlow, data: [...(latestGlow.data || []), ...annotMarks] },
       data: ys,
     }],
     animation: true, animationDuration: 600,

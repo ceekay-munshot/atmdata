@@ -17,6 +17,14 @@ import {
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
+import { findChartAnnotations } from '../annotations.js';
+
+// Metric key → field name used to look up curated annotations
+const METRIC_FIELD = {
+  on_site: 'on_site_atms', off_site: 'off_site_atms', micro: 'micro_atms',
+  dc_vol: 'dc_vol', dc_val_cr: 'dc_val_thousands',
+  cc_vol: 'cc_vol', cc_val_cr: 'cc_val_thousands',
+};
 
 let charts = {};      // id → ECharts instance
 let _root = null;
@@ -230,12 +238,25 @@ function renderTrend(state, allRows, filtered) {
   const valid = ys.filter(v => v != null);
   const mean = valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
 
+  // Spike annotations — only meaningful in Absolute view
+  const annotMarks = (!isShare) ? findChartAnnotations(data, {
+    bank: state.banks && state.banks.length === 1 ? state.banks[0] : null,
+    metric: METRIC_FIELD[state.metric] || state.metric,
+    isStock: m.isStock,
+    freq: state.freq,
+    formatVal: m.format,
+  }) : [];
+  const latestGlow = latestGlowMarkPoint(xs, ys, color);
+
   charts.trend.setOption({
     grid: { left: 70, right: 28, top: 24, bottom: 36 },
     tooltip: { ...TOOLTIP_BASE,
       formatter: (params) => {
-        const p = params[0];
-        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue}</div>
+        if (params.componentType === 'markPoint' && params.data && params.data._annotation) {
+          return `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`;
+        }
+        const p = Array.isArray(params) ? params[0] : params;
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
                 <div style="display:flex;align-items:center;gap:6px">
                   <span style="width:8px;height:8px;background:${color};border-radius:50%;display:inline-block"></span>
                   ${m.short}: <b>${valFmt(p.value)}</b>
@@ -263,7 +284,7 @@ function renderTrend(state, allRows, filtered) {
         },
         data: [{ yAxis: mean }],
       } : undefined,
-      markPoint: latestGlowMarkPoint(xs, ys, color),
+      markPoint: { ...latestGlow, data: [...(latestGlow.data || []), ...annotMarks] },
       data: ys,
     }],
     animation: true, animationDuration: 600, animationEasing: 'cubicOut',
