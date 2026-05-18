@@ -273,7 +273,19 @@ function renderTrend(state, allRows, filtered) {
         },
         data: [{ yAxis: mean }],
       } : undefined,
-      markPoint: { ...latestGlow, data: [...(latestGlow.data || []), ...annotMarks] },
+      markPoint: { ...latestGlow,
+        data: [...(latestGlow.data || []), ...annotMarks],
+        tooltip: {
+          trigger: 'item',
+          backgroundColor: 'rgba(15,23,42,0.94)', borderWidth: 0, borderRadius: 10,
+          padding: [11, 14],
+          textStyle: { color: '#fff', fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 500 },
+          extraCssText: 'box-shadow: 0 12px 32px rgba(15,23,42,0.22); border-radius: 10px;',
+          formatter: (params) => params.data && params.data._annotation
+            ? `<div style="max-width:320px;line-height:1.5">${params.data._annotation}</div>`
+            : '',
+        },
+      },
       data: ys,
     }],
     animation: true, animationDuration: 600,
