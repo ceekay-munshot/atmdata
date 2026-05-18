@@ -151,7 +151,7 @@ function renderCards(state, range) {
     { label: 'Dataset latest',  value: m.latest_period,
       sub: m.first_period + ' → ' + m.latest_period + ' (' + m.period_count + ' months total)' },
     { label: 'Generated at',    value: m.generated_at.slice(0, 16).replace('T', ' ') + ' UTC',
-      sub: 'auto-refreshed by GitHub Action twice a month · source: rbi.org.in' },
+      sub: 'source: rbi.org.in' },
   ];
 
   _root.querySelector('#dq-cards').innerHTML = cards.map(c => `
