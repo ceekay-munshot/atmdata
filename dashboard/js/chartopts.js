@@ -117,6 +117,29 @@ export function indexTo100(values) {
   return values.map(v => v == null ? null : (v / base) * 100);
 }
 
+// Build a tooltip formatter that — given an axis-trigger ECharts params array —
+// returns ONLY the single series whose value at the hovered X maps to a pixel-Y
+// closest to the actual cursor Y. Lets a user hover anywhere on a busy multi-line
+// chart and see just the line they're pointing at (instead of a wall of every bank).
+// Call once per chart after echarts.init(); pass the chart instance.
+export function closestSeriesFormatter(chart) {
+  let cursorY = 0;
+  chart.getZr().on('mousemove', (e) => { cursorY = e.offsetY; });
+  return (renderSingle) => (params) => {
+    if (!Array.isArray(params) || !params.length) return '';
+    let closest = null, minDist = Infinity;
+    for (const p of params) {
+      if (p.value == null) continue;
+      try {
+        const yPx = chart.convertToPixel({ yAxisIndex: 0 }, p.value);
+        const dist = Math.abs(yPx - cursorY);
+        if (dist < minDist) { minDist = dist; closest = p; }
+      } catch (_) { /* axis not ready yet */ }
+    }
+    return closest ? renderSingle(closest) : '';
+  };
+}
+
 // ── Play / replay helper ────────────────────────────────────────────────
 // Filled brand-gradient circles — used as icon-only replay buttons.
 export const PLAY_ICON =

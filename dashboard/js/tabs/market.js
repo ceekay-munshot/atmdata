@@ -12,7 +12,7 @@ import {
   rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, hexA, indexTo100, softLineStyle } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, hexA, indexTo100, softLineStyle, closestSeriesFormatter } from '../chartopts.js';
 
 let charts = {};
 let _root = null;
@@ -25,6 +25,7 @@ let _trendIndexed = false;    // rebase share-trend lines to 100
 let _playing = null;
 let _trendValuesCache = [];
 let _trendColorsCache = [];
+let _trendClosest = null;       // (renderSingle) => formatter — picks bank closest to cursor Y
 
 const HTML = `
   <div class="grid">
@@ -109,6 +110,7 @@ export function mount(root) {
   charts.trend  = echarts.init(root.querySelector('#chart-mk-trend'));
   charts.change = echarts.init(root.querySelector('#chart-mk-change'));
   charts.heat   = echarts.init(root.querySelector('#chart-mk-heat'));
+  _trendClosest = closestSeriesFormatter(charts.trend);
 
   window.addEventListener('resize', onResize);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
@@ -263,15 +265,14 @@ function renderTrend(state, allRows, universe, topBanks) {
   charts.trend.setOption({
     grid: { left: 60, right: 80, top: 44, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 }, icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
-    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
-      formatter: (p) => {
-        if (p.value == null) return '';
+    tooltip: { ...TOOLTIP_BASE,
+      formatter: _trendClosest((p) => {
         const v = _trendIndexed ? p.value.toFixed(1) : (p.value.toFixed(2) + '%');
-        return `<div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
             ${truncate(p.seriesName, 28)}: <b>${v}</b></div>`;
-      },
+      }),
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,

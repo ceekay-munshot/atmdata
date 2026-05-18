@@ -10,7 +10,7 @@ import {
   growth, rankBanks, metric, fmtWithUnit,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, indexTo100, softLineStyle } from '../chartopts.js';
+import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, playReplay, PLAY_ICON, STOP_ICON, EXCEL_ICON, indexTo100, softLineStyle, closestSeriesFormatter } from '../chartopts.js';
 
 const ALL_CATEGORIES = ['Public Sector', 'Private Sector', 'Foreign Bank', 'Payment Bank', 'Small Finance Bank'];
 
@@ -22,6 +22,8 @@ const MIN_BANKS = 2;
 let _playing = { trend: null, share: null };
 let _cache = { trend: { values: [], colors: [] }, share: { values: [], colors: [] } };
 let _indexedTrend = false;   // rebase trend lines to 100
+let _trendClosest = null;    // single-line tooltip helper for trend chart
+let _shareClosest = null;    // ditto for share chart
 
 const HTML = `
   <div class="grid">
@@ -109,6 +111,8 @@ export function mount(root) {
 
   charts.trend = echarts.init(root.querySelector('#chart-cmp-trend'));
   charts.share = echarts.init(root.querySelector('#chart-cmp-share'));
+  _trendClosest = closestSeriesFormatter(charts.trend);
+  _shareClosest = closestSeriesFormatter(charts.share);
 
   window.addEventListener('resize', onResize);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
@@ -313,15 +317,14 @@ function renderTrend(state, allRows) {
     grid: { left: 70, right: 24, top: 40, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 },
               icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
-    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
-      formatter: (p) => {
-        if (p.value == null) return '';
+    tooltip: { ...TOOLTIP_BASE,
+      formatter: _trendClosest((p) => {
         const valStr = _indexedTrend ? p.value.toFixed(1) : fmtWithUnit(m, p.value);
-        return `<div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
             ${truncate(p.seriesName, 28)}: <b>${valStr}</b></div>`;
-      },
+      }),
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
@@ -380,14 +383,13 @@ function renderShare(state, allRows) {
     grid: { left: 60, right: 60, top: 40, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 },
               icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
-    tooltip: { ...TOOLTIP_BASE, trigger: 'item',
-      formatter: (p) => {
-        if (p.value == null) return '';
-        return `<div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+    tooltip: { ...TOOLTIP_BASE,
+      formatter: _shareClosest((p) => {
+        return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue ?? p.name}</div>
           <div style="display:flex;align-items:center;gap:6px">
             <span style="width:8px;height:8px;background:${p.color};border-radius:50%"></span>
             ${truncate(p.seriesName, 28)}: <b>${p.value.toFixed(2)}%</b></div>`;
-      },
+      }),
     },
     xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => v.toFixed(1) + '%' } },
