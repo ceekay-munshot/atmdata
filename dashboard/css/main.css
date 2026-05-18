@@ -395,6 +395,11 @@ button { font-family: inherit; cursor: pointer; }
   color: white;
   box-shadow: 0 2px 4px rgba(79,70,229,0.25);
 }
+.mini-toggle button:disabled {
+  color: var(--fg-4);
+  cursor: not-allowed;
+}
+.mini-toggle button:disabled:hover { color: var(--fg-4); background: transparent; }
 
 .chart {
   width: 100%;

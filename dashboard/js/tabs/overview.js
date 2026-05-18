@@ -22,6 +22,8 @@ let _root = null;
 let _unsub = null;
 let _sortState = { col: 'value', dir: 'desc' };  // for bottom table
 let _tableShowAll = false;
+let _tableMode = 'growth';     // 'growth' | 'cagr'
+let _tableFreq = 'M';          // 'M' | 'Q' | 'Y' (Q/Y land in a follow-up)
 let _playing = null;  // active replay handle (for the trend chart)
 
 const HTML = `
@@ -92,6 +94,15 @@ const HTML = `
           <div class="card-sub" id="table-sub">—</div>
         </div>
         <div class="card-actions">
+          <div class="mini-toggle" id="ov-table-mode" title="Growth = simple % change. CAGR = annualised growth rate.">
+            <button class="active" data-v="growth">Growth</button>
+            <button data-v="cagr">CAGR</button>
+          </div>
+          <div class="mini-toggle" id="ov-table-freq" title="Window scale for the growth columns">
+            <button class="active" data-v="M">Monthly</button>
+            <button data-v="Q" disabled title="Coming soon">Quarterly</button>
+            <button data-v="Y" disabled title="Coming soon">Yearly</button>
+          </div>
           <button class="btn primary" data-export="all">Export All to Excel</button>
         </div>
       </div>
@@ -118,6 +129,20 @@ export function mount(root) {
 
   // Replay button on the hero trend chart
   root.querySelector('[data-action="play-trend"]').addEventListener('click', togglePlayTrend);
+
+  // Table-local toggles (Growth / CAGR + Monthly / Q / Y)
+  root.querySelector('#ov-table-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    _tableMode = b.dataset.v;
+    root.querySelectorAll('#ov-table-mode button').forEach(x => x.classList.toggle('active', x.dataset.v === b.dataset.v));
+    redraw();
+  });
+  root.querySelector('#ov-table-freq').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b || b.disabled) return;
+    _tableFreq = b.dataset.v;
+    root.querySelectorAll('#ov-table-freq button').forEach(x => x.classList.toggle('active', x.dataset.v === b.dataset.v));
+    redraw();
+  });
 
   redraw();
   _unsub = subscribe(() => { stopPlayTrend(); redraw(); });
@@ -490,52 +515,91 @@ function renderShare(state, allRows, filtered) {
 function renderTable(state, allRows, filtered) {
   const m = metric(state.metric);
   const period = state.to || latestPeriod();
-  // Always use cat-filtered universe (ignore bank filter so rank makes sense)
   const baseRows = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
   const ranked = rankBanks(baseRows, state.metric, period);
 
-  // For each ranked bank, compute growth (using current growthType vs reference period)
-  // and share-change in pp.
-  const refPeriod = referencePeriod(period, state.growthType, state.freq);
-  const refRowsArr = refPeriod ? baseRows.filter(r => r.period === refPeriod) : [];
-  const refMap = new Map();
-  for (const r of refRowsArr) {
-    const v = r[m.field];
-    if (v == null) continue;
-    refMap.set(r.bank, (refMap.get(r.bank) ?? 0) + v);
+  // Growth-column offsets for the currently-selected (mode, freq) combo.
+  // Each entry: { label: header text, months: ref-period offset, cagr: annualised? }
+  // For monthly freq, growth uses simple % change; CAGR annualises.
+  // 12M CAGR == YoY % so we drop it in CAGR mode.
+  const growthCols = (_tableFreq === 'M' && _tableMode === 'growth') ? [
+    { id: 'g3',  label: '3M',  months: 3,  cagr: false },
+    { id: 'g6',  label: '6M',  months: 6,  cagr: false },
+    { id: 'g9',  label: '9M',  months: 9,  cagr: false },
+    { id: 'gY',  label: 'YoY', months: 12, cagr: false },
+  ] : (_tableFreq === 'M' && _tableMode === 'cagr') ? [
+    { id: 'c3',  label: '3M CAGR', months: 3, cagr: true },
+    { id: 'c6',  label: '6M CAGR', months: 6, cagr: true },
+    { id: 'c9',  label: '9M CAGR', months: 9, cagr: true },
+  ] : [];
+
+  // Pre-aggregate reference values per ref-period (each bank: sum field)
+  const refByMonths = new Map();   // months → Map(bank → rawValue) + total
+  for (const c of growthCols) {
+    const rp = refPeriodMonthly(period, c.months);
+    const bankMap = new Map();
+    if (rp) {
+      for (const r of baseRows) {
+        if (r.period !== rp) continue;
+        const v = r[m.field];
+        if (v == null) continue;
+        bankMap.set(r.bank, (bankMap.get(r.bank) ?? 0) + v);
+      }
+    }
+    const total = [...bankMap.values()].reduce((s, v) => s + v, 0);
+    refByMonths.set(c.months, { ref: rp, bankMap, total });
   }
-  const refTotal = [...refMap.values()].reduce((s, v) => s + v, 0);
+
+  // Share Δ is anchored to YoY (12M) for stability across both modes.
+  const refShareInfo = refByMonths.get(12) || refByMonths.get(9) || refByMonths.get(6) || refByMonths.get(3);
 
   const enriched = ranked.map((r, i) => {
-    const refValRaw = refMap.get(r.bank);
-    const refValDisp = refValRaw == null ? null : m.transform(refValRaw);
-    let g = null;
-    if (refValDisp != null && refValDisp !== 0 && r.value != null) {
-      g = ((r.value - refValDisp) / refValDisp) * 100;
+    const row = { ...r, rank: i + 1 };
+    for (const c of growthCols) {
+      const info = refByMonths.get(c.months);
+      const refRaw = info.bankMap.get(r.bank);
+      const refDisp = refRaw == null ? null : m.transform(refRaw);
+      let pct = null;
+      if (refDisp != null && refDisp > 0 && r.value != null && r.value > 0) {
+        if (c.cagr) {
+          // CAGR: ((curr/prev)^(12/months) - 1) × 100
+          pct = (Math.pow(r.value / refDisp, 12 / c.months) - 1) * 100;
+        } else {
+          pct = ((r.value - refDisp) / refDisp) * 100;
+        }
+      }
+      row[c.id] = pct;
     }
-    const refShare = (refValRaw != null && refTotal > 0) ? (refValRaw / refTotal) * 100 : null;
-    const shareDelta = (refShare != null && r.share != null) ? r.share - refShare : null;
-    return { ...r, growth: g, shareDelta, rank: i + 1 };
+    // Share Δ vs YoY base (in pp)
+    if (refShareInfo) {
+      const refRaw = refShareInfo.bankMap.get(r.bank);
+      const refShare = (refRaw != null && refShareInfo.total > 0) ? (refRaw / refShareInfo.total) * 100 : null;
+      row.shareDelta = (refShare != null && r.share != null) ? r.share - refShare : null;
+    } else {
+      row.shareDelta = null;
+    }
+    return row;
   });
 
   // sort by current sort state
   const sorted = sortRows(enriched, _sortState);
-
-  // Top 10 by default, with "+ Show more" toggle
   const visibleRows = _tableShowAll ? sorted : sorted.slice(0, 10);
 
-  const headerSub = `${m.label} · ${period} · ${state.category !== 'all' ? state.category + ' · ' : ''}${enriched.length} banks · growth vs ${refPeriod || '—'} (${state.growthType})`;
+  const refLabel = growthCols.length
+    ? `${_tableMode === 'cagr' ? 'CAGR' : 'growth'} vs ${growthCols.map(c => refPeriodMonthly(period, c.months)).filter(Boolean).join(', ')}`
+    : '';
+  const headerSub = `${m.label} · ${period} · ${state.category !== 'all' ? state.category + ' · ' : ''}${enriched.length} banks · ${refLabel}`;
   _root.querySelector('#table-sub').textContent = headerSub;
 
   const wrap = _root.querySelector('#table-wrap');
   const cols = [
-    { id: 'rank',        label: '#',            num: true,  cell: r => `<span class="rank-cell ${r.rank <= 3 ? 'top' : ''}">${r.rank}</span>` },
-    { id: 'bank',        label: 'Bank',         num: false, cell: r => r.bank },
-    { id: 'category',    label: 'Category',     num: false, cell: r => r.category ? `<span class="chip ${catSlug(r.category)}">${shortCat(r.category)}</span>` : '—' },
-    { id: 'value',       label: m.short,        num: true,  cell: r => m.format(r.value) },
-    { id: 'growth',      label: state.growthType, num: true, cell: r => deltaCell(r.growth, '%') },
-    { id: 'share',       label: 'Share',        num: true,  cell: r => r.share == null ? '—' : r.share.toFixed(2) + '%' },
-    { id: 'shareDelta',  label: 'Share Δ',      num: true,  cell: r => deltaCell(r.shareDelta, ' pp') },
+    { id: 'rank',        label: '#',         num: true,  cell: r => `<span class="rank-cell ${r.rank <= 3 ? 'top' : ''}">${r.rank}</span>` },
+    { id: 'bank',        label: 'Bank',      num: false, cell: r => r.bank },
+    { id: 'category',    label: 'Category',  num: false, cell: r => r.category ? `<span class="chip ${catSlug(r.category)}">${shortCat(r.category)}</span>` : '—' },
+    { id: 'value',       label: m.short,     num: true,  cell: r => m.format(r.value) },
+    ...growthCols.map(c => ({ id: c.id, label: c.label, num: true, cell: r => deltaCell(r[c.id], '%') })),
+    { id: 'share',       label: 'Share',     num: true,  cell: r => r.share == null ? '—' : r.share.toFixed(2) + '%' },
+    { id: 'shareDelta',  label: 'Share Δ',   num: true,  cell: r => deltaCell(r.shareDelta, ' pp') },
   ];
 
   const showMoreNote = enriched.length > 10
@@ -572,6 +636,13 @@ function renderTable(state, allRows, filtered) {
   });
   const moreBtn = wrap.querySelector('#ov-table-more');
   if (moreBtn) moreBtn.onclick = () => { _tableShowAll = !_tableShowAll; renderTable(state, allRows, filtered); };
+}
+
+function refPeriodMonthly(currPeriod, monthsBack) {
+  if (!currPeriod || !monthsBack) return null;
+  const [y, m] = currPeriod.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - monthsBack, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 function referencePeriod(period, growthType, freq) {
