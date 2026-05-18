@@ -64,6 +64,12 @@ const HTML = `
             <div class="card-sub" id="growth-sub">—</div>
           </div>
           <div class="card-actions">
+            <div class="mini-toggle" id="ov-growth-type" title="Reference window for the growth bars">
+              <button data-v="MoM">MoM</button>
+              <button data-v="3M">3M</button>
+              <button class="active" data-v="YoY">YoY</button>
+              <button data-v="ShareChange">Share Δ</button>
+            </div>
             <button class="btn-icon" data-export="growth" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
@@ -148,6 +154,17 @@ export function mount(root) {
     redraw();
   });
 
+  // Growth-chart-local: MoM / 3M / YoY / Share Δ
+  const setGrowthToggleActive = () => {
+    const cur = getState().growthType;
+    root.querySelectorAll('#ov-growth-type button').forEach(b => b.classList.toggle('active', b.dataset.v === cur));
+  };
+  setGrowthToggleActive();
+  root.querySelector('#ov-growth-type').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    setState({ growthType: b.dataset.v });
+  });
+
   // Table-local toggles (Growth / CAGR + Monthly / Q / Y)
   root.querySelector('#ov-table-mode').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
@@ -163,7 +180,7 @@ export function mount(root) {
   });
 
   redraw();
-  _unsub = subscribe(() => { stopPlayTrend(); redraw(); });
+  _unsub = subscribe(() => { stopPlayTrend(); setGrowthToggleActive(); redraw(); });
 }
 
 export function unmount() {

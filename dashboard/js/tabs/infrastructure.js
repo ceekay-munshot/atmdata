@@ -54,6 +54,12 @@ const HTML = `
             <div class="card-sub" id="infra-growth-sub">—</div>
           </div>
           <div class="card-actions">
+            <div class="mini-toggle" id="infra-growth-type" title="Reference window for the growth bars">
+              <button data-v="MoM">MoM</button>
+              <button data-v="3M">3M</button>
+              <button class="active" data-v="YoY">YoY</button>
+              <button data-v="ShareChange">Share Δ</button>
+            </div>
             <button class="btn-icon" data-export="growth" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
@@ -136,8 +142,18 @@ export function mount(root) {
     redraw();
   });
 
+  const syncGrowthBtns = () => {
+    const cur = getState().growthType;
+    root.querySelectorAll('#infra-growth-type button').forEach(b => b.classList.toggle('active', b.dataset.v === cur));
+  };
+  syncGrowthBtns();
+  root.querySelector('#infra-growth-type').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    setState({ growthType: b.dataset.v });
+  });
+
   redraw();
-  _unsub = subscribe(() => { stopPlayTrend(); renderMetricToggle(); redraw(); });
+  _unsub = subscribe(() => { stopPlayTrend(); renderMetricToggle(); syncGrowthBtns(); redraw(); });
 }
 
 export function unmount() {

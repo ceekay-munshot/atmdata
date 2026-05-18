@@ -10,7 +10,7 @@ const DEFAULTS = {
   // Toggles
   freq: 'M',                 // 'M' | 'Q' | 'Y'
   view: 'absolute',          // 'absolute' | 'share'
-  growthType: 'MoM',         // 'MoM' | '3M' | 'YoY' | 'ShareChange'
+  growthType: 'YoY',         // 'MoM' | '3M' | 'YoY' | 'ShareChange' — controlled per-chart now (Growth/De-growth card)
   // Tab-local toggles (Card tab)
   cardSide: 'debit',         // 'debit' | 'credit'
   cardMeasure: 'volume',     // 'volume' | 'value'

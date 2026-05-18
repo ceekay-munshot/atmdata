@@ -118,11 +118,6 @@ function render() {
         ${segmented('f-view', VIEW_OPTIONS, s.view)}
       </div>
 
-      <div class="fb-group">
-        <span class="fb-label" title="Drives the Growth/De-growth chart and the growth column in tables">Growth</span>
-        ${segmented('f-growth', GROWTH_OPTIONS, s.growthType)}
-      </div>
-
       <div class="fb-group actions no-divider">
         <button class="btn" id="f-reset" title="Reset all filters">Reset</button>
       </div>
@@ -152,7 +147,6 @@ function render() {
 
   bindSegmented('f-freq', (v) => setState({ freq: v }));
   bindSegmented('f-view', (v) => setState({ view: v }));
-  bindSegmented('f-growth', (v) => setState({ growthType: v }));
 }
 
 function segmented(id, options, currentValue) {
