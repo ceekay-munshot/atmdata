@@ -356,6 +356,18 @@ button { font-family: inherit; cursor: pointer; }
   box-shadow: 0 5px 14px rgba(22, 163, 74, 0.25);
 }
 
+/* Replay / Stop variant: indigo→violet hover, red when playing */
+.btn-icon-play:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.22);
+}
+.btn-icon-play.playing:hover {
+  border-color: #ef4444;
+  background: #fef2f2;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.22);
+}
+
 /* ─── Main ─────────────────────────────────────────────────────────────── */
 .app-main {
   flex: 1;

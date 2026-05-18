@@ -118,10 +118,23 @@ export function indexTo100(values) {
 }
 
 // ── Play / replay helper ────────────────────────────────────────────────
+// Filled brand-gradient circles — used as icon-only replay buttons.
 export const PLAY_ICON =
-  `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="7,4 20,12 7,20"/></svg>`;
+  `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+     <defs><linearGradient id="playgrad" x1="0" y1="0" x2="1" y2="1">
+       <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#7c3aed"/>
+     </linearGradient></defs>
+     <circle cx="12" cy="12" r="11" fill="url(#playgrad)"/>
+     <polygon points="9.5,7.5 17,12 9.5,16.5" fill="white"/>
+   </svg>`;
 export const STOP_ICON =
-  `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
+  `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+     <defs><linearGradient id="stopgrad" x1="0" y1="0" x2="1" y2="1">
+       <stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="#b91c1c"/>
+     </linearGradient></defs>
+     <circle cx="12" cy="12" r="11" fill="url(#stopgrad)"/>
+     <rect x="8" y="8" width="8" height="8" rx="1.5" fill="white"/>
+   </svg>`;
 
 // Excel-style export icon — green file with white "X" mark
 export const EXCEL_ICON =

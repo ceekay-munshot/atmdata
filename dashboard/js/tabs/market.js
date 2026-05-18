@@ -39,7 +39,7 @@ const HTML = `
             <button class="active" data-v="raw">Raw</button>
             <button data-v="indexed">Index = 100</button>
           </div>
-          <button class="btn btn-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}<span>Replay</span></button>
+          <button class="btn-icon btn-icon-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}</button>
           <div class="mini-toggle" id="mk-topn">
             <button data-v="5">Top 5</button>
             <button class="active" data-v="10">Top 10</button>
@@ -159,7 +159,7 @@ export function unmount() {
 function stopPlayTrend() {
   if (_playing) { _playing.stop(); _playing = null; }
   const btn = _root && _root.querySelector('[data-action="play-trend"]');
-  if (btn) { btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; }
+  if (btn) { btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; }
 }
 
 function togglePlayTrend() {
@@ -167,11 +167,11 @@ function togglePlayTrend() {
   if (!_trendValuesCache.length) return;
   const btn = _root.querySelector('[data-action="play-trend"]');
   btn.classList.add('playing');
-  btn.innerHTML = `${STOP_ICON}<span>Stop</span>`;
+  btn.innerHTML = STOP_ICON;
   const fmt = _trendIndexed ? (v) => v.toFixed(1) : (v) => v.toFixed(1) + '%';
   _playing = playReplay(charts.trend, {
     seriesData: _trendValuesCache, colors: _trendColorsCache, durationMs: 2500, formatVal: fmt,
-    onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = `${PLAY_ICON}<span>Replay</span>`; redraw(); },
+    onDone: () => { _playing = null; btn.classList.remove('playing'); btn.innerHTML = PLAY_ICON; redraw(); },
   });
 }
 
