@@ -13,6 +13,7 @@ import {
   series, filterRows, denominatorRows, shareSeries, shareChange,
   growth, rankBanks, metric, fmtCr, fmtInt, fmtPct, fmtPP,
   applyView, isPctView, viewLabelShort, compositionDescription,
+  tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
 import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
@@ -517,29 +518,7 @@ function renderTable(state, allRows, filtered) {
   const baseRows = state.category === 'all' ? allRows : allRows.filter(r => r.category === state.category);
   const ranked = rankBanks(baseRows, state.metric, period);
 
-  // Growth-column offsets for the currently-selected (mode, freq) combo.
-  // Each entry: { label: header text, months: ref-period offset, cagr: annualised? }
-  // For monthly freq, growth uses simple % change; CAGR annualises.
-  // 12M CAGR == YoY % so we drop it in CAGR mode.
-  const growthCols = (_tableFreq === 'M' && _tableMode === 'growth') ? [
-    { id: 'g3',  label: '3M',  months: 3,  cagr: false },
-    { id: 'g6',  label: '6M',  months: 6,  cagr: false },
-    { id: 'g9',  label: '9M',  months: 9,  cagr: false },
-    { id: 'gY',  label: 'YoY', months: 12, cagr: false },
-  ] : (_tableFreq === 'M' && _tableMode === 'cagr') ? [
-    { id: 'c3',  label: '3M CAGR', months: 3, cagr: true },
-    { id: 'c6',  label: '6M CAGR', months: 6, cagr: true },
-    { id: 'c9',  label: '9M CAGR', months: 9, cagr: true },
-  ] : (_tableFreq === 'Y' && _tableMode === 'growth') ? [
-    { id: 'g1y',  label: '1Y',  months: 12,  cagr: false },
-    { id: 'g3y',  label: '3Y',  months: 36,  cagr: false },
-    { id: 'g5y',  label: '5Y',  months: 60,  cagr: false },
-    { id: 'g10y', label: '10Y', months: 120, cagr: false },
-  ] : (_tableFreq === 'Y' && _tableMode === 'cagr') ? [
-    { id: 'c3y',  label: '3Y CAGR',  months: 36,  cagr: true },
-    { id: 'c5y',  label: '5Y CAGR',  months: 60,  cagr: true },
-    { id: 'c10y', label: '10Y CAGR', months: 120, cagr: true },
-  ] : [];
+  const growthCols = tableGrowthColumns(_tableMode, _tableFreq);
 
   // Pre-aggregate reference values per ref-period (each bank: sum field)
   const refByMonths = new Map();   // months → Map(bank → rawValue) + total
@@ -567,16 +546,7 @@ function renderTable(state, allRows, filtered) {
       const info = refByMonths.get(c.months);
       const refRaw = info.bankMap.get(r.bank);
       const refDisp = refRaw == null ? null : m.transform(refRaw);
-      let pct = null;
-      if (refDisp != null && refDisp > 0 && r.value != null && r.value > 0) {
-        if (c.cagr) {
-          // CAGR: ((curr/prev)^(12/months) - 1) × 100
-          pct = (Math.pow(r.value / refDisp, 12 / c.months) - 1) * 100;
-        } else {
-          pct = ((r.value - refDisp) / refDisp) * 100;
-        }
-      }
-      row[c.id] = pct;
+      row[c.id] = computeGrowthPct(r.value, refDisp, c.months, c.cagr);
     }
     // Share Δ vs YoY base (in pp)
     if (refShareInfo) {
@@ -644,13 +614,6 @@ function renderTable(state, allRows, filtered) {
   });
   const moreBtn = wrap.querySelector('#ov-table-more');
   if (moreBtn) moreBtn.onclick = () => { _tableShowAll = !_tableShowAll; renderTable(state, allRows, filtered); };
-}
-
-function refPeriodMonthly(currPeriod, monthsBack) {
-  if (!currPeriod || !monthsBack) return null;
-  const [y, m] = currPeriod.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m - 1 - monthsBack, 1));
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
 function referencePeriod(period, growthType, freq) {

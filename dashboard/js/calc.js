@@ -350,6 +350,52 @@ export function viewLabelShort(state) {
 }
 
 // Used by chart tooltips / formatters when in a % view.
+// ── Table growth-column helpers (shared by every per-bank table) ────────
+// Returns the column spec list for the chosen mode/freq.
+//   mode: 'growth' | 'cagr'
+//   freq: 'M' | 'Y'   (Q intentionally out for now)
+export function tableGrowthColumns(mode, freq) {
+  if (freq === 'M' && mode === 'growth') return [
+    { id: 'g3',  label: '3M',  months: 3,  cagr: false },
+    { id: 'g6',  label: '6M',  months: 6,  cagr: false },
+    { id: 'g9',  label: '9M',  months: 9,  cagr: false },
+    { id: 'gY',  label: 'YoY', months: 12, cagr: false },
+  ];
+  if (freq === 'M' && mode === 'cagr') return [
+    { id: 'c3',  label: '3M CAGR', months: 3, cagr: true },
+    { id: 'c6',  label: '6M CAGR', months: 6, cagr: true },
+    { id: 'c9',  label: '9M CAGR', months: 9, cagr: true },
+  ];
+  if (freq === 'Y' && mode === 'growth') return [
+    { id: 'g1y',  label: '1Y',  months: 12,  cagr: false },
+    { id: 'g3y',  label: '3Y',  months: 36,  cagr: false },
+    { id: 'g5y',  label: '5Y',  months: 60,  cagr: false },
+    { id: 'g10y', label: '10Y', months: 120, cagr: false },
+  ];
+  if (freq === 'Y' && mode === 'cagr') return [
+    { id: 'c3y',  label: '3Y CAGR',  months: 36,  cagr: true },
+    { id: 'c5y',  label: '5Y CAGR',  months: 60,  cagr: true },
+    { id: 'c10y', label: '10Y CAGR', months: 120, cagr: true },
+  ];
+  return [];
+}
+
+export function refPeriodMonthly(currPeriod, monthsBack) {
+  if (!currPeriod || !monthsBack) return null;
+  const [y, m] = currPeriod.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - monthsBack, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+// Simple % or annualised CAGR depending on the cagr flag.
+//   ((curr / ref) ^ (12 / months) - 1) × 100  → annualised growth
+//   ((curr - ref) / ref) × 100                → plain % change
+export function computeGrowthPct(currVal, refVal, months, cagr) {
+  if (currVal == null || refVal == null || refVal <= 0 || currVal <= 0) return null;
+  if (cagr) return (Math.pow(currVal / refVal, 12 / months) - 1) * 100;
+  return ((currVal - refVal) / refVal) * 100;
+}
+
 export function compositionDescription(metricKey) {
   if (['on_site', 'off_site', 'micro'].includes(metricKey)) {
     return '% of (On-site + Off-site + Micro)';
