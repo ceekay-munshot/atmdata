@@ -438,9 +438,12 @@ function renderMix(state, allRows, filtered) {
   const offMap = new Map(offS.map(d => [d.key, d.value ?? 0]));
   const microMap = new Map(microS.map(d => [d.key, d.value ?? 0]));
 
-  const onVals    = keys.map(k => onMap.get(k));
-  const offVals   = keys.map(k => offMap.get(k));
-  const microVals = keys.map(k => microMap.get(k));
+  // Missing periods → 0 (Micro ATMs were only reported from ~2020; treating
+  // pre-2020 micro as undefined would poison the Mix-% total to NaN and blank
+  // the whole pre-2020 range).
+  const onVals    = keys.map(k => onMap.get(k) ?? 0);
+  const offVals   = keys.map(k => offMap.get(k) ?? 0);
+  const microVals = keys.map(k => microMap.get(k) ?? 0);
   const hasMicro  = microVals.some(v => v > 0);
 
   let onsiteY, offsiteY, microY;

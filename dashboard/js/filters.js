@@ -52,6 +52,14 @@ function render() {
   const cats = ['all', ...allCategories()];
   const banks = banksInCategory(s.category);
 
+  // "Market Share" view is only meaningful for a specific bank — the industry's
+  // share of itself is always 100%. Disable it until a bank is picked.
+  const noBank = !(s.banks && s.banks.length);
+  const viewOptions = VIEW_OPTIONS.map(o =>
+    (o[0] === 'share' && noBank)
+      ? [o[0], o[1], 'Pick a specific bank first — industry market share is always 100%', true]
+      : o);
+
   _container.innerHTML = `
     <div class="fb-row">
       <div class="fb-group">
@@ -107,7 +115,7 @@ function render() {
 
       <div class="fb-group">
         <span class="fb-label" title="Show raw values or each bank's % of the chosen denominator">View</span>
-        ${segmented('f-view', VIEW_OPTIONS, s.view)}
+        ${segmented('f-view', viewOptions, s.view)}
       </div>
 
       <div class="fb-group actions no-divider">
@@ -117,7 +125,11 @@ function render() {
   `;
 
   $('#f-metric', _container).onchange = (e) => setState({ metric: e.target.value });
-  $('#f-category', _container).onchange = (e) => setState({ category: e.target.value, banks: [] });
+  $('#f-category', _container).onchange = (e) => {
+    const patch = { category: e.target.value, banks: [] };
+    if (getState().view === 'share') patch.view = 'absolute';
+    setState(patch);
+  };
   bindBankCombo();
   $('#f-from', _container).onchange = (e) => {
     const v = e.target.value;
@@ -144,8 +156,8 @@ function render() {
 function segmented(id, options, currentValue) {
   return `
     <div class="fb-toggle" data-id="${id}">
-      ${options.map(([v, l, tip]) =>
-        `<button class="fb-toggle-btn ${v === currentValue ? 'active' : ''}" data-value="${v}"${tip ? ` title="${tip}"` : ''}>${l}</button>`).join('')}
+      ${options.map(([v, l, tip, disabled]) =>
+        `<button class="fb-toggle-btn ${v === currentValue ? 'active' : ''}" data-value="${v}"${disabled ? ' disabled' : ''}${tip ? ` title="${tip}"` : ''}>${l}</button>`).join('')}
     </div>
   `;
 }
@@ -223,7 +235,11 @@ function bindBankCombo() {
   };
   const choose = (o) => {
     panel.hidden = true;
-    setState({ banks: o.dataset.value ? [o.dataset.value] : [] });
+    const picked = o.dataset.value ? [o.dataset.value] : [];
+    const patch = { banks: picked };
+    // Market Share needs a specific bank — drop back to Absolute if cleared.
+    if (!picked.length && getState().view === 'share') patch.view = 'absolute';
+    setState(patch);
   };
 
   input.addEventListener('focus', () => { panel.hidden = false; input.select(); });
