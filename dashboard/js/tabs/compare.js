@@ -6,7 +6,7 @@
 import { rows, latestPeriod, allBanks, allCategories, banksInCategory } from '../data.js';
 import { getState, subscribe, setState } from '../state.js';
 import {
-  series, filterRows, denominatorRows, shareSeries,
+  series, filterRows, denominatorRows, shareSeries, alignSeries,
   growth, rankBanks, metric, fmtWithUnit,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
@@ -260,6 +260,14 @@ function rowsForEntity(allRows, name, mode) {
     : allRows.filter(r => r.bank === name);
 }
 
+// Restrict rows to the global From/To window (Bank Comparison has no bank/
+// category filter of its own — the picked entities are the comparison set).
+function dateFilter(allRows, state) {
+  return allRows.filter(r =>
+    (!state.from || r.period >= state.from) &&
+    (!state.to || r.period <= state.to));
+}
+
 function redraw() {
   const s = getState();
   const allRows = rows();
@@ -287,17 +295,17 @@ function setEmpty(chart, msg) {
 // ── Trend Comparison ────────────────────────────────────────────────────
 function renderTrend(state, allRows) {
   const m = metric(state.metric);
+  const dated = dateFilter(allRows, state);
   const entities = currentEntities(state);
   const sets = entities.map(name => {
-    const r = rowsForEntity(allRows, name, state.compareMode);
+    const r = rowsForEntity(dated, name, state.compareMode);
     return { name, data: series(r, state.metric, state.freq) };
   });
 
   _root.querySelector('#cmp-trend-sub').textContent =
     `${m.label} · ${freqLabel(state.freq)} · ${m.isStock ? 'As on period-end' : 'For the period'} · ${state.compareMode === 'categories' ? 'by category' : 'by bank'}${_indexedTrend ? ' · rebased to 100' : ''}`;
 
-  const xs = sets[0].data.map(d => d.label);
-  const rawValues = sets.map(s => s.data.map(d => d.value));
+  const { labels: xs, valuesByEntity: rawValues } = alignSeries(sets, state.freq);
   const finalValues = _indexedTrend ? rawValues.map(indexTo100) : rawValues;
   const ss = sets.map((s, i) => ({
     name: s.name,
@@ -337,15 +345,16 @@ function renderTrend(state, allRows) {
 // ── Share Comparison ────────────────────────────────────────────────────
 function renderShare(state, allRows) {
   const m = metric(state.metric);
+  const dated = dateFilter(allRows, state);
   // In categories mode the denominator is always industry (so categories sum
   // to ~100% over time). In banks mode keep current behaviour.
-  const denom = state.compareMode === 'categories' ? allRows : denominatorRows(allRows, state);
+  const denom = state.compareMode === 'categories' ? dated : denominatorRows(dated, state);
   const denomSeries = series(denom, state.metric, state.freq);
   const denomMap = new Map(denomSeries.map(d => [d.key, d.value]));
 
   const entities = currentEntities(state);
   const sets = entities.map(name => {
-    const r = rowsForEntity(allRows, name, state.compareMode);
+    const r = rowsForEntity(dated, name, state.compareMode);
     const s = series(r, state.metric, state.freq);
     return {
       name,
@@ -362,20 +371,20 @@ function renderShare(state, allRows) {
       ? `Each category as % of industry · ${freqLabel(state.freq)}`
       : `Share of ${state.category !== 'all' ? state.category : 'industry'} · ${freqLabel(state.freq)}`;
 
-  const xs = (sets[0]?.data || []).map(d => d.label);
+  const { labels: xs, valuesByEntity: alignedValues } = alignSeries(sets, state.freq);
   const ss = sets.map((s, i) => ({
     name: s.name,
     type: 'line', smooth: 0.4, showSymbol: false,
     lineStyle: softLineStyle(PALETTE[i % PALETTE.length], 2.2),
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
-    data: s.data.map(d => d.value),
+    data: alignedValues[i],
     endLabel: { show: true, color: PALETTE[i % PALETTE.length], fontWeight: 600, fontSize: 11,
       formatter: (p) => p.value == null ? '' : ' ' + p.value.toFixed(1) + '%' },
   }));
 
   _cache.share = {
-    values: sets.map(s => s.data.map(d => d.value)),
+    values: alignedValues,
     colors: sets.map((_, i) => PALETTE[i % PALETTE.length]),
   };
 

@@ -72,27 +72,15 @@ function render() {
 
       <div class="fb-group">
         <span class="fb-label">Bank</span>
-        <select class="fb-select" id="f-bank" style="min-width:260px">
-          <option value="">All banks</option>
-          ${(() => {
-            // Sort: banks with data for current metric first, then banks without
-            // (with a clear "— no data" suffix so the user knows).
-            const field = METRICS[s.metric]?.field;
-            const withData = [], withoutData = [];
-            for (const b of banks) {
-              if (!field || bankHasField(b, field)) withData.push(b);
-              else withoutData.push(b);
-            }
-            const opt = (b, suffix='') =>
-              `<option value="${b}" ${s.banks[0] === b ? 'selected' : ''}>${b}${suffix}</option>`;
-            const withoutMarker = ` — no ${METRICS[s.metric]?.short.toLowerCase() ?? 'data'}`;
-            return [
-              ...withData.map(b => opt(b)),
-              ...(withoutData.length ? ['<option disabled>──────────</option>'] : []),
-              ...withoutData.map(b => opt(b, withoutMarker)),
-            ].join('');
-          })()}
-        </select>
+        <div class="fb-combo" style="min-width:260px">
+          <input type="text" class="fb-select fb-combo-input" id="f-bank-input"
+                 placeholder="All banks" autocomplete="off" spellcheck="false"
+                 value="${esc(s.banks[0] || '')}">
+          <div class="fb-combo-panel" id="f-bank-panel" hidden>
+            ${bankOptionsHTML(banks, s)}
+            <div class="fb-combo-empty" hidden>No banks match</div>
+          </div>
+        </div>
       </div>
 
       <div class="fb-group">
@@ -126,7 +114,7 @@ function render() {
 
   $('#f-metric', _container).onchange = (e) => setState({ metric: e.target.value });
   $('#f-category', _container).onchange = (e) => setState({ category: e.target.value, banks: [] });
-  $('#f-bank', _container).onchange = (e) => setState({ banks: e.target.value ? [e.target.value] : [] });
+  bindBankCombo();
   $('#f-from', _container).onchange = (e) => {
     const v = e.target.value;
     const cur = getState();
@@ -166,5 +154,90 @@ function bindSegmented(id, onChange) {
     if (!btn) return;
     const v = btn.dataset.value;
     onChange(v);
+  });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Bank picker option list — banks with data for the current metric first,
+// then a separator, then the rest. Each row carries data-value + data-search.
+function bankOptionsHTML(banks, s) {
+  const field = METRICS[s.metric]?.field;
+  const sel = s.banks[0] || '';
+  const withData = [], withoutData = [];
+  for (const b of banks) {
+    if (!field || bankHasField(b, field)) withData.push(b);
+    else withoutData.push(b);
+  }
+  const opt = (val, label, cls = '') =>
+    `<div class="fb-combo-opt ${cls} ${val === sel ? 'sel' : ''}" role="option"
+          data-value="${esc(val)}" data-search="${esc(label.toLowerCase())}">${esc(label)}</div>`;
+  let html = opt('', 'All banks');
+  html += withData.map(b => opt(b, b)).join('');
+  if (withoutData.length) {
+    html += `<div class="fb-combo-sep">no data for this metric</div>`;
+    html += withoutData.map(b => opt(b, b, 'muted')).join('');
+  }
+  return html;
+}
+
+// Wire the searchable Bank combobox: focus opens, typing filters, click /
+// Enter selects, Escape or click-away cancels.
+function bindBankCombo() {
+  const input = $('#f-bank-input', _container);
+  const panel = $('#f-bank-panel', _container);
+  if (!input || !panel) return;
+  const opts = [...panel.querySelectorAll('.fb-combo-opt')];
+  const seps = [...panel.querySelectorAll('.fb-combo-sep')];
+  const emptyMsg = panel.querySelector('.fb-combo-empty');
+  const savedValue = input.value;
+  let hl = -1;
+
+  const visible = () => opts.filter(o => !o.hidden);
+  const paintHl = () => {
+    opts.forEach(o => o.classList.remove('hl'));
+    const vis = visible();
+    if (hl >= 0 && hl < vis.length) {
+      vis[hl].classList.add('hl');
+      vis[hl].scrollIntoView({ block: 'nearest' });
+    }
+  };
+  const filter = () => {
+    const q = input.value.trim().toLowerCase();
+    let n = 0;
+    for (const o of opts) {
+      const hit = !q || o.dataset.search.includes(q);
+      o.hidden = !hit;
+      if (hit) n++;
+    }
+    seps.forEach(sep => { sep.hidden = !!q; });
+    emptyMsg.hidden = n > 0;
+    hl = -1; paintHl();
+  };
+  const choose = (o) => {
+    panel.hidden = true;
+    setState({ banks: o.dataset.value ? [o.dataset.value] : [] });
+  };
+
+  input.addEventListener('focus', () => { panel.hidden = false; input.select(); });
+  input.addEventListener('input', filter);
+  input.addEventListener('blur', () => {
+    setTimeout(() => { panel.hidden = true; input.value = savedValue; }, 130);
+  });
+  input.addEventListener('keydown', (e) => {
+    const vis = visible();
+    if (e.key === 'ArrowDown') { e.preventDefault(); hl = Math.min(hl + 1, vis.length - 1); paintHl(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); hl = Math.max(hl - 1, 0); paintHl(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const o = hl >= 0 ? vis[hl] : vis[0]; if (o) choose(o); }
+    else if (e.key === 'Escape') { input.value = savedValue; panel.hidden = true; input.blur(); }
+  });
+  panel.addEventListener('mousedown', (e) => {
+    const o = e.target.closest('.fb-combo-opt');
+    if (!o) return;
+    e.preventDefault();   // keep input focused, avoid blur race
+    choose(o);
   });
 }

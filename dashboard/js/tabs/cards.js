@@ -416,6 +416,8 @@ function renderGrowth(state, allRows, filtered) {
     if (v < 0)  return { value: v, itemStyle: { color: DOWN } };
     return { value: v, itemStyle: { color: FLAT } };
   });
+  const gMax = Math.max(0, ...gArr.filter(v => v != null).map(v => Math.abs(v)));
+  const gDec = gMax >= 10 ? 0 : gMax >= 1 ? 1 : 2;
 
   charts.growth.setOption({
     grid: { left: 60, right: 16, top: 24, bottom: 44 },
@@ -430,7 +432,7 @@ function renderGrowth(state, allRows, filtered) {
       },
     },
     xAxis: { ...AXIS_X, data: xs },
-    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => v.toFixed(0) + units } },
+    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => v.toFixed(gDec) + units } },
     series: [{
       type: 'bar', data: colored, barMaxWidth: 18,
       itemStyle: { borderRadius: [3, 3, 0, 0] },

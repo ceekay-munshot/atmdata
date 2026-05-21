@@ -8,7 +8,7 @@
 import { rows, latestPeriod } from '../data.js';
 import { getState, subscribe, setState } from '../state.js';
 import {
-  series, filterRows, denominatorRows, shareSeries,
+  series, filterRows, denominatorRows, shareSeries, netAdds,
   growth, rankBanks, metric, METRICS, fmtWithUnit,
   applyView, isPctView, compositionDescription,
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
@@ -24,6 +24,7 @@ let _sortState = { col: 'value', dir: 'desc' };
 let _tableShowAll = false;
 let _tableMode = 'growth';     // 'growth' | 'cagr'
 let _tableFreq = 'M';          // 'M' | 'Y'
+let _growthMode = 'pct';       // 'pct' | 'adds' — Growth chart: % growth vs net adds
 let _playing = null;
 
 const INFRA_METRICS = ['on_site', 'off_site', 'micro'];
@@ -54,6 +55,10 @@ const HTML = `
             <div class="card-sub" id="infra-growth-sub">—</div>
           </div>
           <div class="card-actions">
+            <div class="mini-toggle" id="infra-growth-mode" title="Percentage change vs absolute units added">
+              <button class="active" data-v="pct">% Growth</button>
+              <button data-v="adds">Net Adds</button>
+            </div>
             <div class="mini-toggle" id="infra-growth-type" title="Reference window for the growth bars">
               <button data-v="MoM">MoM</button>
               <button data-v="3M">3M</button>
@@ -150,6 +155,13 @@ export function mount(root) {
   root.querySelector('#infra-growth-type').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
     setState({ growthType: b.dataset.v });
+  });
+
+  root.querySelector('#infra-growth-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    _growthMode = b.dataset.v;
+    root.querySelectorAll('#infra-growth-mode button').forEach(x => x.classList.toggle('active', x === b));
+    redraw();
   });
 
   redraw();
@@ -319,32 +331,43 @@ function renderTrend(state, allRows, filtered) {
 // ── Growth ────────────────────────────────────────────────────────────
 function renderGrowth(state, allRows, filtered) {
   const m = metric(state.metric);
-  const isShareChange = state.growthType === 'ShareChange';
+  const isAdds = _growthMode === 'adds';
+  const isShareChange = !isAdds && state.growthType === 'ShareChange';
   const useState = (isShareChange && state.view === 'absolute')
     ? { ...state, view: 'share' } : state;
-  const isShare = isPctView(useState);
-  let base = series(filtered, state.metric, state.freq);
-  base = applyView(base, allRows, useState, state.freq, state.metric);
 
-  let gArr, units;
-  if (isShareChange) {
-    const lookback = state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1;
-    gArr = []; for (let i = 0; i < base.length; i++) {
-      if (i < lookback || base[i].value == null || base[i - lookback].value == null) gArr.push(null);
-      else gArr.push(base[i].value - base[i - lookback].value);
-    }
-    units = 'pp';
+  let base, gArr, units, tipFmt;
+  if (isAdds) {
+    base = series(filtered, state.metric, state.freq);
+    const win = state.growthType === 'ShareChange' ? 'YoY' : state.growthType;
+    gArr = netAdds(base, win, state.freq);
+    tipFmt = (v) => (v > 0 ? '+' : '') + fmtWithUnit(m, v);
   } else {
-    gArr = growth(base, state.growthType, state.freq);
-    units = '%';
+    base = series(filtered, state.metric, state.freq);
+    base = applyView(base, allRows, useState, state.freq, state.metric);
+    if (isShareChange) {
+      const lookback = state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1;
+      gArr = []; for (let i = 0; i < base.length; i++) {
+        if (i < lookback || base[i].value == null || base[i - lookback].value == null) gArr.push(null);
+        else gArr.push(base[i].value - base[i - lookback].value);
+      }
+      units = 'pp';
+      tipFmt = (v) => (v > 0 ? '+' : '') + v.toFixed(2) + ' pp';
+    } else {
+      gArr = growth(base, state.growthType, state.freq);
+      units = '%';
+      tipFmt = (v) => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+    }
   }
 
   let suffix = '';
   if (isShareChange) suffix = ' (pp, YoY)';
-  else if (state.view === 'share') suffix = ' · on market share';
-  else if (state.view === 'composition') suffix = ' · on composition %';
-  _root.querySelector('#infra-growth-sub').textContent =
-    `${m.short} · ${isShareChange ? 'Share Δ' : state.growthType}${suffix}`;
+  else if (!isAdds && state.view === 'share') suffix = ' · on market share';
+  else if (!isAdds && state.view === 'composition') suffix = ' · on composition %';
+  const winLabel = state.growthType === 'ShareChange' ? 'YoY' : state.growthType;
+  _root.querySelector('#infra-growth-sub').textContent = isAdds
+    ? `${m.short} · Net adds · ${winLabel} window`
+    : `${m.short} · ${isShareChange ? 'Share Δ' : state.growthType}${suffix}`;
 
   if (!base.length || base.every(d => d.value == null)) {
     setEmptyChart(charts.growth, 'No data', 'No values to compute growth on');
@@ -358,6 +381,8 @@ function renderGrowth(state, allRows, filtered) {
     if (v < 0)  return { value: v, itemStyle: { color: DOWN } };
     return { value: v, itemStyle: { color: FLAT } };
   });
+  const gMax = Math.max(0, ...gArr.filter(v => v != null).map(v => Math.abs(v)));
+  const gDec = gMax >= 10 ? 0 : gMax >= 1 ? 1 : 2;
 
   charts.growth.setOption({
     grid: { left: 60, right: 16, top: 24, bottom: 44 },
@@ -368,11 +393,12 @@ function renderGrowth(state, allRows, filtered) {
         return `<div style="font-weight:600;margin-bottom:4px">${p.axisValue}</div>
                 <div style="display:flex;align-items:center;gap:6px">
                   <span style="width:8px;height:8px;background:${c};border-radius:50%"></span>
-                  ${state.growthType}: <b>${v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + units}</b></div>`;
+                  ${isAdds ? 'Net adds' : (isShareChange ? 'Share Δ' : state.growthType)}: <b>${v == null ? '—' : tipFmt(v)}</b></div>`;
       },
     },
     xAxis: { ...AXIS_X, data: xs },
-    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel, formatter: (v) => v.toFixed(0) + units } },
+    yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
+      formatter: (v) => isAdds ? compactNum(v) : v.toFixed(gDec) + units } },
     series: [{
       type: 'bar', data: colored, barMaxWidth: 18,
       itemStyle: { borderRadius: [3, 3, 0, 0] },
@@ -637,21 +663,30 @@ function onExport(which) {
   const sheets = [];
 
   if (which === 'growth' || which === 'all') {
-    const isShareChange = state.growthType === 'ShareChange';
-    const useState = (isShareChange && state.view === 'absolute') ? { ...state, view: 'share' } : state;
-    let base = series(filtered, state.metric, state.freq);
-    base = applyView(base, allRows, useState, state.freq, state.metric);
-    let g;
-    if (isShareChange) {
-      const lookback = state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1;
-      g = []; for (let i = 0; i < base.length; i++) {
-        if (i < lookback || base[i].value == null || base[i - lookback].value == null) g.push(null);
-        else g.push(base[i].value - base[i - lookback].value);
-      }
-    } else { g = growth(base, state.growthType, state.freq); }
-    sheets.push({ name: 'Growth', rows:
-      [['Period', isShareChange ? 'Share Δ (pp)' : `${state.growthType} %`],
-       ...base.map((d, i) => [d.label, g[i]])] });
+    if (_growthMode === 'adds') {
+      const base = series(filtered, state.metric, state.freq);
+      const win = state.growthType === 'ShareChange' ? 'YoY' : state.growthType;
+      const g = netAdds(base, win, state.freq);
+      sheets.push({ name: 'Net Adds', rows:
+        [['Period', `Net adds (${win}, ${m.unitShort || 'units'})`],
+         ...base.map((d, i) => [d.label, g[i]])] });
+    } else {
+      const isShareChange = state.growthType === 'ShareChange';
+      const useState = (isShareChange && state.view === 'absolute') ? { ...state, view: 'share' } : state;
+      let base = series(filtered, state.metric, state.freq);
+      base = applyView(base, allRows, useState, state.freq, state.metric);
+      let g;
+      if (isShareChange) {
+        const lookback = state.freq === 'M' ? 12 : state.freq === 'Q' ? 4 : 1;
+        g = []; for (let i = 0; i < base.length; i++) {
+          if (i < lookback || base[i].value == null || base[i - lookback].value == null) g.push(null);
+          else g.push(base[i].value - base[i - lookback].value);
+        }
+      } else { g = growth(base, state.growthType, state.freq); }
+      sheets.push({ name: 'Growth', rows:
+        [['Period', isShareChange ? 'Share Δ (pp)' : `${state.growthType} %`],
+         ...base.map((d, i) => [d.label, g[i]])] });
+    }
   }
 
   if (which === 'all') {

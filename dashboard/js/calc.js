@@ -194,6 +194,48 @@ export function series(rows, metricKey, freq) {
   return out;
 }
 
+// Align multiple series onto one shared period axis = the union of every
+// series' keys, freq-sorted. Each input set is { name, data:[{key,label,value}] }
+// (i.e. series() output). Missing points become null. Used by Bank Comparison so
+// the x-axis spans the full date range even when one selected bank reports fewer
+// months than another.
+export function alignSeries(sets, freq) {
+  const keyLabel = new Map();
+  for (const s of sets) {
+    for (const d of s.data) {
+      if (!keyLabel.has(d.key)) keyLabel.set(d.key, d.label);
+    }
+  }
+  const keys = [...keyLabel.keys()].sort(
+    (a, b) => sortKeyForFreq(a, freq).localeCompare(sortKeyForFreq(b, freq)));
+  return {
+    keys,
+    labels: keys.map(k => keyLabel.get(k)),
+    valuesByEntity: sets.map(s => {
+      const vm = new Map(s.data.map(d => [d.key, d.value]));
+      return keys.map(k => vm.has(k) ? vm.get(k) : null);
+    }),
+  };
+}
+
+// ── NET ADDS ────────────────────────────────────────────────────────────
+// Period-over-period absolute change of a series (output of `series`).
+// netAdds[i] = value[i] − value[i−window]. window respects freq for the
+// 3M/YoY lookbacks. Returns a parallel array; null where no reference exists.
+export function netAdds(seriesArr, type, freq) {
+  const out = seriesArr.map(() => null);
+  for (let i = 0; i < seriesArr.length; i++) {
+    let back = 1;
+    if (type === '3M') back = freq === 'M' ? 3 : 1;
+    else if (type === 'YoY') back = freq === 'M' ? 12 : freq === 'Q' ? 4 : 1;
+    if (i < back) continue;
+    const cur = seriesArr[i].value, prev = seriesArr[i - back].value;
+    if (cur == null || prev == null) continue;
+    out[i] = cur - prev;
+  }
+  return out;
+}
+
 // ── GROWTH ──────────────────────────────────────────────────────────────
 // Given a series array (output of `series`), return parallel array of growth %
 // for the chosen growth type. Returns null when previous reference unavailable.
