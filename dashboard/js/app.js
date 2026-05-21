@@ -18,7 +18,6 @@ import * as quality from './tabs/quality.js';
 //   4. remove the chatbot import + mount below
 import { mount as mountChatbot } from './chatbot.js';
 import { mount as mountDossier } from './dossier.js';
-import { mount as mountOnepager } from './onepager.js';
 
 const TABS = { overview, infrastructure, cards, compare, market, productivity, cms, quality };
 
@@ -43,7 +42,6 @@ async function boot() {
   activateTab('overview');
   mountChatbot(document.querySelector('#chatbot-mount'));
   mountDossier(document.querySelector('#dossier-mount'));
-  mountOnepager(document.querySelector('#onepager-mount'));
 
   // hide veil
   const veil = document.querySelector('#loading-veil');
