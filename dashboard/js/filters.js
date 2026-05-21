@@ -53,12 +53,11 @@ function render() {
   const banks = banksInCategory(s.category);
 
   // "Market Share" view is only meaningful for a specific bank — the industry's
-  // share of itself is always 100%. Disable it until a bank is picked.
+  // share of itself is always 100%. Drop the option entirely until a bank is picked.
   const noBank = !(s.banks && s.banks.length);
-  const viewOptions = VIEW_OPTIONS.map(o =>
-    (o[0] === 'share' && noBank)
-      ? [o[0], o[1], 'Pick a specific bank first — industry market share is always 100%', true]
-      : o);
+  const viewOptions = noBank
+    ? VIEW_OPTIONS.filter(o => o[0] !== 'share')
+    : VIEW_OPTIONS;
 
   _container.innerHTML = `
     <div class="fb-row">
@@ -98,12 +97,12 @@ function render() {
       <div class="fb-group">
         <span class="fb-label">From</span>
         <input type="month" class="fb-input fb-monthinput" id="f-from"
-               min="${firstPeriod()}" max="${latestPeriod()}" value="${fromVal}">
+               min="2014-01" max="${latestPeriod()}" value="${fromVal}">
       </div>
       <div class="fb-group">
         <span class="fb-label">To</span>
         <input type="month" class="fb-input fb-monthinput" id="f-to"
-               min="${firstPeriod()}" max="${latestPeriod()}" value="${toVal}">
+               min="2014-01" max="${latestPeriod()}" value="${toVal}">
       </div>
     </div>
 

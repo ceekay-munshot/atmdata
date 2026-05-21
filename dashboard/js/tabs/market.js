@@ -8,7 +8,7 @@
 import { rows, latestPeriod, firstPeriod } from '../data.js';
 import { getState, subscribe } from '../state.js';
 import {
-  series, filterRows, denominatorRows, shareSeries,
+  series, filterRows, denominatorRows, shareSeries, alignSeries,
   rankBanks, metric,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
@@ -187,12 +187,15 @@ function effectiveBase() {
 // ── 1. Market Share Trend (top N) ───────────────────────────────────────
 function renderTrend(state, allRows, universe, topBanks) {
   const m = metric(state.metric);
-  const denom = denominatorRows(allRows, state);
+  // Respect the global From → To window.
+  const dated = allRows.filter(r =>
+    (!state.from || r.period >= state.from) && (!state.to || r.period <= state.to));
+  const denom = denominatorRows(dated, state);
   const denomSeries = series(denom, state.metric, state.freq);
   const denomMap = new Map(denomSeries.map(d => [d.key, d.value]));
 
   const sets = topBanks.map(bank => {
-    const br = allRows.filter(r => r.bank === bank);
+    const br = dated.filter(r => r.bank === bank);
     const s = series(br, state.metric, state.freq);
     return {
       name: bank,
@@ -203,8 +206,7 @@ function renderTrend(state, allRows, universe, topBanks) {
     };
   });
 
-  const xs = (sets[0]?.data || []).map(d => d.label);
-  const rawValues = sets.map(s => s.data.map(d => d.value));
+  const { labels: xs, valuesByEntity: rawValues } = alignSeries(sets, state.freq);
   const finalValues = _trendIndexed ? rawValues.map(indexTo100) : rawValues;
   const ss = sets.map((s, i) => ({
     name: s.name,
@@ -213,8 +215,6 @@ function renderTrend(state, allRows, universe, topBanks) {
     itemStyle: { color: PALETTE[i % PALETTE.length] },
     emphasis: { focus: 'series', lineStyle: { width: 3 } },
     data: finalValues[i],
-    endLabel: { show: true, color: PALETTE[i % PALETTE.length], fontWeight: 600, fontSize: 11,
-      formatter: (p) => p.value == null ? '' : (_trendIndexed ? ' ' + p.value.toFixed(0) : ' ' + p.value.toFixed(1) + '%') },
   }));
 
   // Cache for replay button
@@ -222,7 +222,7 @@ function renderTrend(state, allRows, universe, topBanks) {
   _trendColorsCache = sets.map((_, i) => PALETTE[i % PALETTE.length]);
 
   charts.trend.setOption({
-    grid: { left: 60, right: 80, top: 44, bottom: 44 },
+    grid: { left: 60, right: 28, top: 44, bottom: 44 },
     legend: { top: 4, textStyle: { color: '#334155', fontSize: 11 }, icon: 'roundRect', itemWidth: 10, itemHeight: 6 },
     tooltip: { ...TOOLTIP_BASE,
       formatter: _trendClosest((p) => {

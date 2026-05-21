@@ -68,7 +68,6 @@ const HTML = `
               <button data-v="MoM">MoM</button>
               <button data-v="3M">3M</button>
               <button class="active" data-v="YoY">YoY</button>
-              <button data-v="ShareChange">Share Δ</button>
             </div>
             <button class="btn-icon" data-export="growth" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
