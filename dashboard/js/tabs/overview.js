@@ -754,7 +754,7 @@ function renderTable(state, allRows, filtered) {
   const wrap = _root.querySelector('#table-wrap');
   const cols = [
     { id: 'rank',        label: '#',         num: true,  cell: r => `<span class="rank-cell ${r.rank <= 3 ? 'top' : ''}">${r.rank}</span>` },
-    { id: 'bank',        label: 'Bank',      num: false, cell: r => r.bank },
+    { id: 'bank',        label: 'Bank',      num: false, cell: r => `<span class="bank-link" data-bank="${r.bank}">${r.bank}</span>` },
     { id: 'category',    label: 'Category',  num: false, cell: r => r.category ? `<span class="chip ${catSlug(r.category)}">${shortCat(r.category)}</span>` : '—' },
     { id: 'value',       label: m.short,     num: true,  cell: r => m.format(r.value) },
     ...growthCols.map(c => ({ id: c.id, label: c.label, num: true, cell: r => deltaCell(r[c.id], '%') })),
@@ -796,6 +796,9 @@ function renderTable(state, allRows, filtered) {
   });
   const moreBtn = wrap.querySelector('#ov-table-more');
   if (moreBtn) moreBtn.onclick = () => { _tableShowAll = !_tableShowAll; renderTable(state, allRows, filtered); };
+  wrap.querySelectorAll('.bank-link').forEach(el => {
+    el.onclick = () => window.openDossier && window.openDossier(el.dataset.bank);
+  });
 }
 
 function referencePeriod(period, growthType, freq) {
