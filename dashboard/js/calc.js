@@ -381,7 +381,12 @@ export function compositionDenomSeries(allRows, state, freq, metricKey) {
 // current view (absolute / share / composition) and return the final series.
 export function applyView(numerator, allRows, state, freq, metricKey) {
   if (state.view === 'share') {
-    return shareSeries(numerator, series(denominatorRows(allRows, state), metricKey, freq));
+    // With a specific bank selected, share is measured within the chosen
+    // category (or industry). With no bank, the numerator IS the category —
+    // so its share is measured against the whole industry.
+    const hasBank = state.banks && state.banks.length;
+    const denomState = hasBank ? state : { ...state, category: 'all' };
+    return shareSeries(numerator, series(denominatorRows(allRows, denomState), metricKey, freq));
   }
   if (state.view === 'composition') {
     return shareSeries(numerator, compositionDenomSeries(allRows, state, freq, metricKey));

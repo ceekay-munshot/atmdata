@@ -52,12 +52,13 @@ function render() {
   const cats = ['all', ...allCategories()];
   const banks = banksInCategory(s.category);
 
-  // "Market Share" view is only meaningful for a specific bank — the industry's
-  // share of itself is always 100%. Drop the option entirely until a bank is picked.
-  const noBank = !(s.banks && s.banks.length);
-  const viewOptions = noBank
-    ? VIEW_OPTIONS.filter(o => o[0] !== 'share')
-    : VIEW_OPTIONS;
+  // "Market Share" needs a numerator — a specific bank, or a category (shown
+  // as that category's % of the whole industry). Hide it only when nothing
+  // is selected (All banks + All categories), where it would just be 100%.
+  const shareUsable = (s.banks && s.banks.length) || (s.category && s.category !== 'all');
+  const viewOptions = shareUsable
+    ? VIEW_OPTIONS
+    : VIEW_OPTIONS.filter(o => o[0] !== 'share');
 
   _container.innerHTML = `
     <div class="fb-row">
@@ -125,8 +126,11 @@ function render() {
 
   $('#f-metric', _container).onchange = (e) => setState({ metric: e.target.value });
   $('#f-category', _container).onchange = (e) => {
-    const patch = { category: e.target.value, banks: [] };
-    if (getState().view === 'share') patch.view = 'absolute';
+    const newCat = e.target.value;
+    const patch = { category: newCat, banks: [] };
+    // After this no bank is selected; Market Share stays valid only if the
+    // new category is a real category (category % of industry).
+    if (newCat === 'all' && getState().view === 'share') patch.view = 'absolute';
     setState(patch);
   };
   bindBankCombo();
@@ -236,8 +240,12 @@ function bindBankCombo() {
     panel.hidden = true;
     const picked = o.dataset.value ? [o.dataset.value] : [];
     const patch = { banks: picked };
-    // Market Share needs a specific bank — drop back to Absolute if cleared.
-    if (!picked.length && getState().view === 'share') patch.view = 'absolute';
+    // Clearing the bank only drops Market Share if no category is selected
+    // either — a category alone still works (category % of industry).
+    const cur = getState();
+    if (!picked.length && (!cur.category || cur.category === 'all') && cur.view === 'share') {
+      patch.view = 'absolute';
+    }
     setState(patch);
   };
 
