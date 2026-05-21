@@ -43,6 +43,7 @@ export const AXIS_X = {
     fontWeight: 500,
     fontFamily: 'Inter, sans-serif',
     margin: 14,
+    showMaxLabel: true,   // always label the latest period so it's never hidden
   },
   splitLine: { show: false },
 };
@@ -73,6 +74,17 @@ export function gradientArea(color) {
       { offset: 0,    color: hexA(color, 0.20) },
       { offset: 0.55, color: hexA(color, 0.06) },
       { offset: 1,    color: hexA(color, 0.00) },
+    ],
+  };
+}
+
+// Solid vertical gradient for bar columns — readable, not washed-out
+export function gradientBar(color) {
+  return {
+    type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+    colorStops: [
+      { offset: 0, color: hexA(color, 1) },
+      { offset: 1, color: hexA(color, 0.62) },
     ],
   };
 }

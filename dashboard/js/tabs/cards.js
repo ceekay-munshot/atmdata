@@ -14,7 +14,7 @@ import {
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, gradientBar, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
 import { findChartAnnotations } from '../annotations.js';
 
 const METRIC_FIELD = {
@@ -29,6 +29,7 @@ let _sortState = { col: 'value', dir: 'desc' };
 let _tableShowAll = false;
 let _tableMode = 'growth';
 let _tableFreq = 'M';
+let _trendChart = 'line';      // 'line' | 'bar' — Card Trends chart style
 let _playing = null;
 
 const CARD_METRICS = ['dc_vol', 'dc_val_cr', 'cc_vol', 'cc_val_cr'];
@@ -57,6 +58,10 @@ const HTML = `
           <div class="card-sub">Monthly flow values · For the month/period</div>
         </div>
         <div class="card-actions">
+          <div class="mini-toggle" id="card-trend-chart" title="Chart style">
+            <button class="active" data-v="line">Line</button>
+            <button data-v="bar">Bar</button>
+          </div>
           <button class="btn-icon btn-icon-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}</button>
           <div class="mini-toggle" id="card-side"></div>
           <div class="mini-toggle" id="card-measure"></div>
@@ -133,6 +138,12 @@ export function mount(root) {
   window.addEventListener('resize', onResize);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => onExport(b.dataset.export));
   root.querySelector('[data-action="play-trend"]').addEventListener('click', togglePlayTrend);
+  root.querySelector('#card-trend-chart').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    _trendChart = b.dataset.v;
+    root.querySelectorAll('#card-trend-chart button').forEach(x => x.classList.toggle('active', x === b));
+    redraw();
+  });
   root.querySelector('#card-table-mode').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
     _tableMode = b.dataset.v;
@@ -153,6 +164,7 @@ export function mount(root) {
   syncGrowthBtns();
   root.querySelector('#card-growth-type').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
+    root.querySelectorAll('#card-growth-type button').forEach(x => x.classList.toggle('active', x === b));
     setState({ growthType: b.dataset.v });
   });
 
@@ -275,13 +287,16 @@ function renderTrend(state, allRows, filtered) {
             ${m.short} (For the month): <b>${valFmt(p.value)}</b></div>`;
       },
     },
-    xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
+    xAxis: { ...AXIS_X, data: xs, boundaryGap: _trendChart === 'bar' },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
     series: [{
-      type: 'line', smooth: true, showSymbol: false,
-      lineStyle: softLineStyle(color, 2.6),
-      areaStyle: { color: gradientArea(color) },
+      ...(_trendChart === 'bar'
+        ? { type: 'bar', barMaxWidth: 16,
+            itemStyle: { color: gradientBar(color), borderRadius: [3, 3, 0, 0] } }
+        : { type: 'line', smooth: true, showSymbol: false,
+            lineStyle: softLineStyle(color, 2.6),
+            areaStyle: { color: gradientArea(color) } }),
       markLine: mean != null ? {
         symbol: 'none', silent: true,
         lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },

@@ -259,8 +259,16 @@ button { font-family: inherit; cursor: pointer; }
 
 /* Searchable combobox — used by the Bank filter */
 .fb-combo { position: relative; display: inline-block; }
-.fb-combo-input { width: 100%; cursor: text; }
+.fb-combo-input { width: 100%; cursor: text; padding-left: 32px; }
 .fb-combo-input::placeholder { color: var(--fg-3); font-weight: 500; }
+.fb-combo-search-icon {
+  position: absolute;
+  left: 11px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px;
+  color: var(--fg-3);
+  pointer-events: none;
+  z-index: 1;
+}
 .fb-combo-panel {
   position: absolute;
   top: calc(100% + 4px); left: 0; right: 0;
@@ -444,6 +452,7 @@ button { font-family: inherit; cursor: pointer; }
   display: flex; justify-content: space-between; align-items: flex-start;
   margin-bottom: 16px;
   gap: 12px;
+  flex-wrap: wrap;          /* card-actions drop below the title rather than clip */
 }
 .card-head-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .card-title {
@@ -455,7 +464,7 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 12px; color: var(--fg-3);
   font-weight: 500;
 }
-.card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.card-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
 .mini-toggle {
   display: inline-flex;
   background: var(--bg-sunken);
@@ -467,12 +476,13 @@ button { font-family: inherit; cursor: pointer; }
   border: none; background: transparent;
   padding: 4px 9px;
   font-size: 11px; font-weight: 600;
-  color: var(--fg-3);
+  color: var(--fg-2);
   border-radius: 4px;
   cursor: pointer;
-  transition: background 120ms, color 120ms;
+  transition: background 120ms, color 120ms, transform 80ms;
 }
-.mini-toggle button:hover { color: var(--brand); background: rgba(99,102,241,0.08); }
+.mini-toggle button:hover { color: var(--brand); background: rgba(99,102,241,0.10); }
+.mini-toggle button:active { transform: scale(0.93); }
 .mini-toggle button.active {
   background: var(--brand-grad);
   color: white;

@@ -23,6 +23,15 @@ let _state = { ...DEFAULTS };
 const listeners = new Set();
 
 export function getState() { return { ..._state }; }
+
+// Notify every listener; isolate failures so one throwing subscriber
+// can't block the rest (e.g. a chart error must not freeze the filter bar).
+function notify() {
+  for (const l of listeners) {
+    try { l(_state); }
+    catch (e) { console.error('state listener failed:', e); }
+  }
+}
 export function setState(patch) {
   let changed = false;
   for (const k of Object.keys(patch)) {
@@ -31,11 +40,9 @@ export function setState(patch) {
       changed = true;
     }
   }
-  if (changed) {
-    for (const l of listeners) l(_state);
-  }
+  if (changed) notify();
 }
-export function resetState() { _state = { ...DEFAULTS }; for (const l of listeners) l(_state); }
+export function resetState() { _state = { ...DEFAULTS }; notify(); }
 export function subscribe(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);

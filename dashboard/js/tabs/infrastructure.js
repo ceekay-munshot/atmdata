@@ -14,7 +14,7 @@ import {
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, gradientBar, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle } from '../chartopts.js';
 import { findChartAnnotations } from '../annotations.js';
 
 let charts = {};
@@ -25,6 +25,7 @@ let _tableShowAll = false;
 let _tableMode = 'growth';     // 'growth' | 'cagr'
 let _tableFreq = 'M';          // 'M' | 'Y'
 let _growthMode = 'pct';       // 'pct' | 'adds' — Growth chart: % growth vs net adds
+let _trendChart = 'line';      // 'line' | 'bar' — Infrastructure Trends chart style
 let _playing = null;
 
 const INFRA_METRICS = ['on_site', 'off_site', 'micro'];
@@ -39,6 +40,10 @@ const HTML = `
           <div class="card-sub">On-site / Off-site / Micro ATMs · period-end values</div>
         </div>
         <div class="card-actions">
+          <div class="mini-toggle" id="infra-trend-chart" title="Chart style">
+            <button class="active" data-v="line">Line</button>
+            <button data-v="bar">Bar</button>
+          </div>
           <button class="btn-icon btn-icon-play" data-action="play-trend" title="Replay timeline">${PLAY_ICON}</button>
           <div class="mini-toggle" id="infra-metric"></div>
         </div>
@@ -154,6 +159,7 @@ export function mount(root) {
   syncGrowthBtns();
   root.querySelector('#infra-growth-type').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
+    root.querySelectorAll('#infra-growth-type button').forEach(x => x.classList.toggle('active', x === b));
     setState({ growthType: b.dataset.v });
   });
 
@@ -161,6 +167,13 @@ export function mount(root) {
     const b = e.target.closest('button[data-v]'); if (!b) return;
     _growthMode = b.dataset.v;
     root.querySelectorAll('#infra-growth-mode button').forEach(x => x.classList.toggle('active', x === b));
+    redraw();
+  });
+
+  root.querySelector('#infra-trend-chart').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    _trendChart = b.dataset.v;
+    root.querySelectorAll('#infra-trend-chart button').forEach(x => x.classList.toggle('active', x === b));
     redraw();
   });
 
@@ -289,13 +302,16 @@ function renderTrend(state, allRows, filtered) {
                   ${m.short} (As on): <b>${valFmt(p.value)}</b></div>`;
       },
     },
-    xAxis: { ...AXIS_X, data: xs, boundaryGap: false },
+    xAxis: { ...AXIS_X, data: xs, boundaryGap: _trendChart === 'bar' },
     yAxis: { ...AXIS_Y, axisLabel: { ...AXIS_Y.axisLabel,
       formatter: (v) => isShare ? v.toFixed(1) + '%' : compactNum(v) } },
     series: [{
-      type: 'line', smooth: true, showSymbol: false,
-      lineStyle: softLineStyle(color, 2.6),
-      areaStyle: { color: gradientArea(color) },
+      ...(_trendChart === 'bar'
+        ? { type: 'bar', barMaxWidth: 16,
+            itemStyle: { color: gradientBar(color), borderRadius: [3, 3, 0, 0] } }
+        : { type: 'line', smooth: true, showSymbol: false,
+            lineStyle: softLineStyle(color, 2.6),
+            areaStyle: { color: gradientArea(color) } }),
       markLine: mean != null ? {
         symbol: 'none', silent: true,
         lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },

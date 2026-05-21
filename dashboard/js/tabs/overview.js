@@ -16,7 +16,7 @@ import {
   tableGrowthColumns, refPeriodMonthly, computeGrowthPct,
 } from '../calc.js';
 import { exportSheets, currentFilterMeta } from '../export.js';
-import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle, hexA } from '../chartopts.js';
+import { PALETTE, UP, DOWN, FLAT, TOOLTIP_BASE, AXIS_X, AXIS_Y, gradientArea, gradientBar, compactNum, playReplay, latestGlowMarkPoint, PLAY_ICON, STOP_ICON, EXCEL_ICON, setEmptyChart, softLineStyle, hexA } from '../chartopts.js';
 import { findChartAnnotations } from '../annotations.js';
 import { forecastSeries } from '../forecast.js';
 
@@ -188,6 +188,7 @@ export function mount(root) {
   setGrowthToggleActive();
   root.querySelector('#ov-growth-type').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
+    root.querySelectorAll('#ov-growth-type button').forEach(x => x.classList.toggle('active', x === b));
     setState({ growthType: b.dataset.v });
   });
 
@@ -378,7 +379,7 @@ function renderTrend(state, allRows, filtered) {
         name: 'actual',
         ...(isBar
           ? { type: 'bar', barMaxWidth: 16, stack: 'trend',
-              itemStyle: { color: gradientArea(color), borderRadius: [3, 3, 0, 0] } }
+              itemStyle: { color: gradientBar(color), borderRadius: [3, 3, 0, 0] } }
           : { type: 'line', smooth: true, showSymbol: false,
               lineStyle: softLineStyle(color, 2.6),
               areaStyle: { color: gradientArea(color) } }),

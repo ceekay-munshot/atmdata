@@ -73,8 +73,12 @@ function render() {
       <div class="fb-group">
         <span class="fb-label">Bank</span>
         <div class="fb-combo" style="min-width:260px">
+          <svg class="fb-combo-search-icon" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
           <input type="text" class="fb-select fb-combo-input" id="f-bank-input"
-                 placeholder="All banks" autocomplete="off" spellcheck="false"
+                 placeholder="Type bank name…" autocomplete="off" spellcheck="false"
                  value="${esc(s.banks[0] || '')}">
           <div class="fb-combo-panel" id="f-bank-panel" hidden>
             ${bankOptionsHTML(banks, s)}
