@@ -5,7 +5,7 @@
 //   4. Market Share Heatmap (bank × time → share %)
 // Share change is always in PP, NEVER called growth.
 
-import { rows, latestPeriod } from '../data.js';
+import { rows, latestPeriod, firstPeriod } from '../data.js';
 import { getState, subscribe } from '../state.js';
 import {
   series, filterRows, denominatorRows, shareSeries,
@@ -17,10 +17,8 @@ import { PALETTE, TOOLTIP_BASE, AXIS_X, AXIS_Y, compactNum, UP, DOWN, FLAT, play
 let charts = {};
 let _root = null;
 let _unsub = null;
-let _heatmapWindow = 36;   // months
 let _heatmapMode = 'share';   // 'share' | 'delta'
 let _topN = 10;
-let _basePeriod = null;       // null = auto (YoY); otherwise YYYY-MM
 let _trendIndexed = false;    // rebase share-trend lines to 100
 let _playing = null;
 let _trendValuesCache = [];
@@ -59,8 +57,6 @@ const HTML = `
             <div class="card-sub" id="mk-chg-sub">—</div>
           </div>
           <div class="card-actions">
-            <label class="mk-base-lbl">Base:</label>
-            <input type="month" id="mk-base" class="fb-input mk-base-input" />
             <button class="btn-icon" data-export="change" title="Export to Excel">${EXCEL_ICON}</button>
           </div>
         </div>
@@ -89,12 +85,6 @@ const HTML = `
             <button class="active" data-v="share">Share %</button>
             <button data-v="delta">Δ pp (MoM)</button>
           </div>
-          <div class="mini-toggle" id="mk-window">
-            <button data-v="12">12 m</button>
-            <button data-v="24">24 m</button>
-            <button class="active" data-v="36">36 m</button>
-            <button data-v="60">60 m</button>
-          </div>
           <button class="btn-icon primary" data-export="all" title="Export to Excel">${EXCEL_ICON}</button>
         </div>
       </div>
@@ -121,24 +111,12 @@ export function mount(root) {
     root.querySelectorAll('#mk-topn button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
     redraw();
   };
-  root.querySelector('#mk-window').onclick = (e) => {
-    const btn = e.target.closest('button[data-v]'); if (!btn) return;
-    _heatmapWindow = +btn.dataset.v;
-    root.querySelectorAll('#mk-window button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
-    redraw();
-  };
   root.querySelector('#mk-heat-mode').onclick = (e) => {
     const btn = e.target.closest('button[data-v]'); if (!btn) return;
     _heatmapMode = btn.dataset.v;
     root.querySelectorAll('#mk-heat-mode button').forEach(b => b.classList.toggle('active', b.dataset.v === btn.dataset.v));
     redraw();
   };
-  // Base period picker (Share Change + Top Gainers/Losers use the same base)
-  const baseInput = root.querySelector('#mk-base');
-  baseInput.addEventListener('change', () => {
-    _basePeriod = baseInput.value || null;
-    redraw();
-  });
   root.querySelector('#mk-trend-index').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-v]'); if (!btn) return;
     _trendIndexed = btn.dataset.v === 'indexed';
@@ -188,9 +166,6 @@ function redraw() {
   _root.querySelector('#mk-sub').textContent =
     `${metric(state.metric).label} · share within ${state.category !== 'all' ? state.category : 'industry'}`;
 
-  // Sync base-period picker bounds + value
-  syncBaseInput(allRows, period);
-
   // Determine top-N banks by latest period
   const ranked = rankBanks(universe, state.metric, period).slice(0, _topN);
   const topBanks = ranked.map(r => r.bank);
@@ -201,28 +176,10 @@ function redraw() {
   renderHeatmap(state, universe, period, topBanks);
 }
 
-function syncBaseInput(allRows, period) {
-  const input = _root.querySelector('#mk-base');
-  if (!input) return;
-  const allPeriods = [...new Set(allRows.map(r => r.period))].sort();
-  input.min = allPeriods[0];
-  input.max = period;
-  // If user hasn't set a base, default to YoY of current period
-  if (!_basePeriod) {
-    input.value = yoyOf(period);
-  } else {
-    input.value = _basePeriod;
-  }
-}
-
-function yoyOf(period) {
-  const [y, m] = period.split('-').map(Number);
-  const d = new Date(Date.UTC(y - 1, m - 1, 1));
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-function effectiveBase(period) {
-  return _basePeriod || yoyOf(period);
+// Share Change & Top Gainers/Losers compare against the start of the globally
+// selected date range (the From filter) — no separate base picker.
+function effectiveBase() {
+  return getState().from || firstPeriod();
 }
 
 // ── 1. Market Share Trend (top N) ───────────────────────────────────────
@@ -285,7 +242,7 @@ function renderTrend(state, allRows, universe, topBanks) {
 // ── 2. Share Change (pp) — single bar per bank, custom base period ────
 function renderChange(state, allRows, universe, period, topBanks) {
   const m = metric(state.metric);
-  const refPeriod = effectiveBase(period);
+  const refPeriod = effectiveBase();
   const denom = denominatorRows(allRows, state);
 
   // Validate that refPeriod actually exists in the data
@@ -357,7 +314,7 @@ function renderChange(state, allRows, universe, period, topBanks) {
 // ── 3. Top Gainers / Losers (split table) ──────────────────────────────
 function renderMovers(state, allRows, universe, period) {
   const m = metric(state.metric);
-  const refPeriod = effectiveBase(period);
+  const refPeriod = effectiveBase();
   const allPeriodsSet = new Set(allRows.map(r => r.period));
   if (!refPeriod || !allPeriodsSet.has(refPeriod)) {
     _root.querySelector('#mk-mov-sub').textContent = `Base ${refPeriod || '—'} not in dataset`;
@@ -422,14 +379,10 @@ function renderHeatmap(state, universe, period, topBanks) {
   const allPeriods = [...new Set(universe.map(r => r.period))].sort();
   const endIdx = allPeriods.indexOf(period);
   if (endIdx < 0) { setEmpty(charts.heat, 'No data'); return; }
-  // Respect both the local window AND the top-bar From: take whichever
-  // produces the SHORTER range (the more restrictive constraint wins).
-  let startIdx = Math.max(0, endIdx - _heatmapWindow + 1);
+  // Heatmap spans the globally selected From → To range.
   const s = getState();
-  if (s.from) {
-    const fromIdx = allPeriods.indexOf(s.from);
-    if (fromIdx > startIdx) startIdx = fromIdx;
-  }
+  const fromIdx = s.from ? allPeriods.indexOf(s.from) : 0;
+  const startIdx = fromIdx >= 0 ? fromIdx : 0;
   const periodsWindow = allPeriods.slice(startIdx, endIdx + 1);
 
   const dN = new Map();
@@ -478,8 +431,8 @@ function renderHeatmap(state, universe, period, topBanks) {
 
   _root.querySelector('#mk-heat-sub').textContent =
     _heatmapMode === 'delta'
-      ? `Top ${ys.length} banks · last ${periodsWindow.length} months · MoM Δ in pp · ${state.category !== 'all' ? state.category : 'industry'}`
-      : `Top ${ys.length} banks · last ${periodsWindow.length} months · share % · ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
+      ? `Top ${ys.length} banks · ${periodsWindow.length} months · MoM Δ in pp · ${state.category !== 'all' ? state.category : 'industry'}`
+      : `Top ${ys.length} banks · ${periodsWindow.length} months · share % · ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
 
   const cellWide = periodsWindow.length <= 24;
 
@@ -598,7 +551,7 @@ function onExport(which) {
   const topBanks = rankBanks(universe, state.metric, period).slice(0, _topN).map(r => r.bank);
 
   if (which === 'change' || which === 'all') {
-    const refPeriod = effectiveBase(period);
+    const refPeriod = effectiveBase();
     const allPeriodsSet = new Set(allRows.map(r => r.period));
     if (refPeriod && allPeriodsSet.has(refPeriod)) {
       const denom = denominatorRows(allRows, state);
@@ -636,10 +589,11 @@ function onExport(which) {
       rows: [['Period', ...sets.map(s => s.name)],
         ...keys.map((k, i) => [labels[i], ...maps.map(m => m.get(k))])] });
 
-    // Heatmap data
+    // Heatmap data — spans the global From → To range
     const allPeriods = [...new Set(universe.map(r => r.period))].sort();
     const endIdx = allPeriods.indexOf(period);
-    const startIdx = Math.max(0, endIdx - _heatmapWindow + 1);
+    const fromIdx = state.from ? allPeriods.indexOf(state.from) : 0;
+    const startIdx = fromIdx >= 0 ? fromIdx : 0;
     const periodsWindow = allPeriods.slice(startIdx, endIdx + 1);
     const dN = new Map();
     for (const p of periodsWindow) dN.set(p, sumAt(universe, p, m.field));

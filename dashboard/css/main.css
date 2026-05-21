@@ -655,36 +655,6 @@ table.tbl tbody tr:last-child td { border-bottom: none; }
 }
 .cmp-hint.warn { color: var(--warn); font-weight: 600; }
 
-/* ─── Market Share — base period picker ────────────────────────────────── */
-.mk-base-lbl {
-  font-size: 11px; font-weight: 600;
-  color: var(--fg-3);
-  text-transform: uppercase; letter-spacing: 0.06em;
-  margin-right: 4px;
-}
-.mk-base-input {
-  appearance: none; -webkit-appearance: none;
-  border: 1px solid var(--line-strong);
-  background-color: var(--bg-elev);
-  color: var(--fg);
-  font-family: inherit;
-  font-size: 12px; font-weight: 600;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  height: 32px;
-  min-width: 140px;
-  cursor: pointer;
-  transition: border-color 150ms, box-shadow 150ms, background-color 150ms;
-  font-variant-numeric: tabular-nums;
-}
-.mk-base-input:hover { border-color: var(--brand); background-color: var(--brand-soft); }
-.mk-base-input:focus {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: var(--ring);
-  background-color: var(--bg-elev);
-}
-
 /* ─── Productivity category cards ──────────────────────────────────────── */
 .prod-cat-grid {
   display: grid;
