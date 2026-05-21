@@ -19,6 +19,8 @@ let _root = null;
 let _unsub = null;
 let _heatmapMode = 'share';   // 'share' | 'delta'
 let _topN = 10;
+
+const HEATMAP_MAX_MONTHS = 60;   // cap heatmap width so a long range stays legible
 let _trendIndexed = false;    // rebase share-trend lines to 100
 let _playing = null;
 let _trendValuesCache = [];
@@ -379,10 +381,13 @@ function renderHeatmap(state, universe, period, topBanks) {
   const allPeriods = [...new Set(universe.map(r => r.period))].sort();
   const endIdx = allPeriods.indexOf(period);
   if (endIdx < 0) { setEmpty(charts.heat, 'No data'); return; }
-  // Heatmap spans the globally selected From → To range.
+  // Heatmap spans the globally selected From → To range, capped to the most
+  // recent HEATMAP_MAX_MONTHS so a multi-year range stays readable.
   const s = getState();
   const fromIdx = s.from ? allPeriods.indexOf(s.from) : 0;
-  const startIdx = fromIdx >= 0 ? fromIdx : 0;
+  let startIdx = fromIdx >= 0 ? fromIdx : 0;
+  const capped = endIdx - startIdx + 1 > HEATMAP_MAX_MONTHS;
+  if (capped) startIdx = endIdx - HEATMAP_MAX_MONTHS + 1;
   const periodsWindow = allPeriods.slice(startIdx, endIdx + 1);
 
   const dN = new Map();
@@ -429,10 +434,13 @@ function renderHeatmap(state, universe, period, topBanks) {
     return mm === 1 || mm === 4 || mm === 7 || mm === 10;
   });
 
+  const monthsLabel = capped
+    ? `latest ${periodsWindow.length} months of range`
+    : `${periodsWindow.length} months`;
   _root.querySelector('#mk-heat-sub').textContent =
     _heatmapMode === 'delta'
-      ? `Top ${ys.length} banks · ${periodsWindow.length} months · MoM Δ in pp · ${state.category !== 'all' ? state.category : 'industry'}`
-      : `Top ${ys.length} banks · ${periodsWindow.length} months · share % · ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
+      ? `Top ${ys.length} banks · ${monthsLabel} · MoM Δ in pp · ${state.category !== 'all' ? state.category : 'industry'}`
+      : `Top ${ys.length} banks · ${monthsLabel} · share % · ${state.category !== 'all' ? state.category : 'industry'} · sorted by latest`;
 
   const cellWide = periodsWindow.length <= 24;
 
@@ -589,11 +597,12 @@ function onExport(which) {
       rows: [['Period', ...sets.map(s => s.name)],
         ...keys.map((k, i) => [labels[i], ...maps.map(m => m.get(k))])] });
 
-    // Heatmap data — spans the global From → To range
+    // Heatmap data — global From → To range, capped to HEATMAP_MAX_MONTHS
     const allPeriods = [...new Set(universe.map(r => r.period))].sort();
     const endIdx = allPeriods.indexOf(period);
     const fromIdx = state.from ? allPeriods.indexOf(state.from) : 0;
-    const startIdx = fromIdx >= 0 ? fromIdx : 0;
+    let startIdx = fromIdx >= 0 ? fromIdx : 0;
+    if (endIdx - startIdx + 1 > HEATMAP_MAX_MONTHS) startIdx = endIdx - HEATMAP_MAX_MONTHS + 1;
     const periodsWindow = allPeriods.slice(startIdx, endIdx + 1);
     const dN = new Map();
     for (const p of periodsWindow) dN.set(p, sumAt(universe, p, m.field));
