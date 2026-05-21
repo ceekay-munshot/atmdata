@@ -1190,20 +1190,26 @@ table.tbl tbody tr:last-child td { border-bottom: none; }
   color: #0f172a;
   background: #fff;
 }
-.ps-head { border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 16px; }
-.ps-title { font-size: 20px; font-weight: 700; }
-.ps-ctx { font-size: 11px; color: #475569; margin-top: 5px; font-weight: 500; }
-.ps-stamp { font-size: 10px; color: #94a3b8; margin-top: 3px; }
-.ps-kpis { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.ps-head { border-bottom: 2px solid #4f46e5; padding-bottom: 8px; margin-bottom: 12px; }
+.ps-title { font-size: 19px; font-weight: 700; }
+.ps-ctx { font-size: 10.5px; color: #475569; margin-top: 4px; font-weight: 500; }
+.ps-stamp { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+.ps-kpis { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .ps-kpi {
-  flex: 1; min-width: 130px;
-  border: 1px solid #e2e8f0; border-radius: 6px; padding: 9px 11px;
+  flex: 1; min-width: 120px;
+  border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px 10px;
 }
-.ps-kpi-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
-.ps-kpi-value { font-size: 16px; font-weight: 700; margin: 2px 0; }
-.ps-kpi-sub { font-size: 9px; color: #64748b; }
-.ps-chart { margin-bottom: 18px; break-inside: avoid; }
-.ps-chart-title { font-size: 13px; font-weight: 700; }
-.ps-chart-sub { font-size: 10px; color: #64748b; margin-bottom: 5px; }
-.ps-chart img { width: 100%; height: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
-.ps-foot { font-size: 10px; color: #94a3b8; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+.ps-kpi-label { font-size: 8.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.ps-kpi-value { font-size: 15px; font-weight: 700; margin: 2px 0; }
+.ps-kpi-sub { font-size: 8.5px; color: #64748b; }
+.ps-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ps-chart {
+  break-inside: avoid;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 9px 11px;
+}
+.ps-chart.wide { grid-column: 1 / -1; }
+.ps-chart-title { font-size: 12px; font-weight: 700; }
+.ps-chart-sub { font-size: 9px; color: #64748b; margin-bottom: 4px; line-height: 1.35; }
+.ps-chart img { width: 100%; height: auto; display: block; }
+.ps-foot { font-size: 9px; color: #94a3b8; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 7px; }

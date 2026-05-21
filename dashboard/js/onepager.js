@@ -70,12 +70,12 @@ function generate() {
         <div class="ps-kpi-value">${k.value}</div>
         <div class="ps-kpi-sub">${k.sub}</div>
       </div>`).join('')}</div>` : ''}
-    ${blocks.map(b => `
-      <div class="ps-chart">
+    ${blocks.length ? `<div class="ps-charts">${blocks.map((b, i) => `
+      <div class="ps-chart${i === 0 ? ' wide' : ''}">
         <div class="ps-chart-title">${b.title}</div>
         ${b.sub ? `<div class="ps-chart-sub">${b.sub}</div>` : ''}
         <img src="${b.img}" alt="${b.title}">
-      </div>`).join('')}
+      </div>`).join('')}</div>` : ''}
     <div class="ps-foot">Reserve Bank of India · Bank-wise ATM/POS/Card Statistics · rbi.org.in</div>
   `;
 
