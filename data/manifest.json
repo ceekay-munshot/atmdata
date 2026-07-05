@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-20T08:49:26+00:00",
+  "generated_at": "2026-07-05T08:48:28+00:00",
   "periods": [
     "2011-04",
     "2011-05",
@@ -174,11 +174,12 @@
     "2026-01",
     "2026-02",
     "2026-03",
-    "2026-04"
+    "2026-04",
+    "2026-05"
   ],
-  "period_count": 174,
+  "period_count": 175,
   "first_period": "2011-04",
-  "latest_period": "2026-04",
+  "latest_period": "2026-05",
   "bank_count": 101,
   "categories": [
     "Foreign Bank",
@@ -187,5 +188,5 @@
     "Public Sector",
     "Small Finance Bank"
   ],
-  "row_count": 9883
+  "row_count": 9946
 }
